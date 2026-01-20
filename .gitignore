@@ -1,0 +1,63 @@
+# The modules/ folder should be ignored as it contains cloned repos
+modules/
+
+div/
+
+# Logs
+logs/
+*.log
+
+# Environment files (keep examples, ignore actual configs)
+*.env
+!example.*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Models (large files)
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+Models/
+models/
+
+# Documentation generated files (keep MODEL_LOG.md in version control)
+# but ignore other generated docs
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS files
+Thumbs.db
+.DS_Store
