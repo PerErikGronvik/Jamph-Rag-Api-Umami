@@ -21,9 +21,10 @@ Instructions for installing optional modules or repositories.
    docker compose --profile metaflow-ui up -d
 
 **Service ports**:
+- Training Pipeline: http://localhost:8003 (Not implemented)
 - Ollama: http://localhost:11434
 - MLFlow: http://localhost:5001
-- Governance API: http://localhost:8001
+- Governance API: http://localhost:8001 (Not implemented)
 - Metaflow UI: http://localhost:8002
 
 **Stop services**:
