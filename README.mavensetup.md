@@ -16,7 +16,7 @@
 ```
 Umami (Vite) → Rag-umami API (Kotlin/Ktor) → Ollama (LLM)
                       ↓
-                 PostgreSQL
+            PostgreSQL (External)
 ```
 
 ## Prerequisites
@@ -25,7 +25,7 @@ Complete main setup guide first (Development setup.md).
 
 ## Architecture
 
-**Database:** Same PostgreSQL, separate databases.
+**Database:** External PostgreSQL server (configurable via DATABASE_URL).
 
 ## Step 1: Create Maven Project
 
@@ -412,12 +412,12 @@ ktor {
 }
 
 database {
-    url = "jdbc:postgresql://localhost:5432/ragumami"
+    url = "jdbc:postgresql://your-postgres-host:5432/ragumami"
     url = ${?DATABASE_URL}
     driver = "org.postgresql.Driver"
-    user = "umami"
+    user = "your-db-user"
     user = ${?POSTGRES_USER}
-    password = "umami"
+    password = "your-db-password"
     password = ${?POSTGRES_PASSWORD}
 }
 
@@ -481,12 +481,15 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.gson.*
 import io.ktor.http.*
+import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
 
 class OllamaClient(
     private val baseUrl: String,
     private val model: String
 ) {
+    private val logger = LoggerFactory.getLogger(OllamaClient::class.java)
+    
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             gson()
@@ -501,35 +504,73 @@ class OllamaClient(
         install(HttpRequestRetry) {
             retryOnServerErrors(maxRetries = 3)
             exponentialDelay()
-            retryIf { _, response ->
-                response.status.value in 500..599
+            
+            retryIf { request, response ->
+                val shouldRetry = response.status.value in 500..599
+                if (shouldRetry) {
+                    logger.warn(
+                        "OLLAMA_RETRY: Retrying request to {} due to status {}. Attempt: {}",
+                        request.url.encodedPath,
+                        response.status.value,
+                        retryCount
+                    )
+                }
+                shouldRetry
             }
         }
     }
 
     suspend fun generate(prompt: String): String {
-        val response = client.post("$baseUrl/api/generate") {
-            contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "model" to model,
-                "prompt" to prompt,
-                "stream" to false
-            ))
+        return try {
+            val startTime = System.currentTimeMillis()
+            
+            val response = client.post("$baseUrl/api/generate") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "model" to model,
+                    "prompt" to prompt,
+                    "stream" to false
+                ))
+            }
+            
+            val duration = System.currentTimeMillis() - startTime
+            logger.info("OLLAMA_SUCCESS: Generate completed in {}ms", duration)
+            
+            response.bodyAsText()
+            
+        } catch (e: HttpRequestTimeoutException) {
+            logger.error("OLLAMA_TIMEOUT: Request timed out after 30s for model: {}", model, e)
+            throw e
+        } catch (e: Exception) {
+            logger.error("OLLAMA_ERROR: Failed to generate response", e)
+            throw e
         }
-        
-        return response.bodyAsText()
     }
 
     suspend fun embed(text: String): List<Float> {
-        val response = client.post("$baseUrl/api/embeddings") {
-            contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "model" to model,
-                "prompt" to text
-            ))
+        return try {
+            val startTime = System.currentTimeMillis()
+            
+            val response = client.post("$baseUrl/api/embeddings") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "model" to model,
+                    "prompt" to text
+                ))
+            }
+            
+            val duration = System.currentTimeMillis() - startTime
+            logger.info("OLLAMA_EMBED_SUCCESS: Embedding completed in {}ms", duration)
+            
+            emptyList() // TODO: Parse actual response
+            
+        } catch (e: HttpRequestTimeoutException) {
+            logger.error("OLLAMA_EMBED_TIMEOUT: Embedding timed out after 30s", e)
+            throw e
+        } catch (e: Exception) {
+            logger.error("OLLAMA_EMBED_ERROR: Failed to create embedding", e)
+            throw e
         }
-        
-        return emptyList() // TODO: Parse actual response
     }
 }
 ```
@@ -769,16 +810,15 @@ curl http://localhost:8084/health
 curl http://localhost:8084/
 ```
 
-## Step 9: Integration with Docker Services
+## Step 9: Environment Configuration
 
 Create `.env` file in `backend/` directory:
 
 ```properties
-# Database Configuration
-DATABASE_URL=jdbc:postgresql://localhost:5432/ragumami
-POSTGRES_USER=umami
-POSTGRES_PASSWORD=umami
-POSTGRES_DB=umami
+# External PostgreSQL Configuration
+DATABASE_URL=jdbc:postgresql://your-postgres-host:5432/ragumami
+POSTGRES_USER=your-db-user
+POSTGRES_PASSWORD=your-db-password
 
 # Ollama Configuration
 OLLAMA_BASE_URL=http://localhost:11434
@@ -793,20 +833,27 @@ ENVIRONMENT=development
 LOG_LEVEL=DEBUG
 ```
 
-Start Docker services (from `backend/` directory):
+**Database Setup:**
+
+Configure your external PostgreSQL server with:
+- Database: `ragumami`
+- User with appropriate permissions
+- Update DATABASE_URL, POSTGRES_USER, and POSTGRES_PASSWORD in `.env`
+
+Start Ollama service (from `backend/` directory):
 
 ```bash
-# Start PostgreSQL and Ollama
+# Start Ollama only
 docker compose --profile ollama up -d
 
 # Verify services
 docker compose ps
 
-# Create ragumami database
-docker exec -it backend-postgres-1 psql -U umami -c "CREATE DATABASE ragumami;"
-
 # Verify Ollama
 curl http://localhost:11434/api/tags
+
+# Pull model if needed
+docker exec -it backend-ollama-1 ollama pull llama3.2:3b
 ```
 
 ## Step 10: VS Code Maven
@@ -920,17 +967,58 @@ docker exec -it backend-ollama-1 ollama pull llama3.2:3b
 ### Database Connection Issues
 
 ```bash
-# Verify PostgreSQL is running
-docker compose ps | grep postgres
+# Test external PostgreSQL connection
+psql -h your-postgres-host -U your-db-user -d ragumami
 
-# Test connection
-docker exec -it backend-postgres-1 psql -U umami -d ragumami
+# Verify DATABASE_URL format
+echo $env:DATABASE_URL  # Windows
+echo $DATABASE_URL      # macOS/Linux
 
-# Check if database exists
-docker exec -it backend-postgres-1 psql -U umami -c "\l"
+# Check connection from application
+# Review logs for "Connection refused" or "Authentication failed" errors
 
-# Create database if missing
-docker exec -it backend-postgres-1 psql -U umami -c "CREATE DATABASE ragumami;"
+# If database doesn't exist, create it on your PostgreSQL server:
+psql -h your-postgres-host -U your-db-user -c "CREATE DATABASE ragumami;"
+```
+
+## NAIS Monitoring
+
+For overvåkning i NAIS, se etter disse loggmeldingene:
+
+### Retry Events
+```
+OLLAMA_RETRY: Retrying request to /api/generate due to status 503. Attempt: 2
+```
+- Viser når Ollama er midlertidig utilgjengelig
+- Indikerer potensielle kapasitetsproblemer
+- Eksponentiell delay mellom forsøk: 1s, 2s, 4s
+
+### Timeout Events
+```
+OLLAMA_TIMEOUT: Request timed out after 30s for model: llama3.2:3b
+```
+- Viser når LLM-generering tar over 30 sekunder
+- Kan indikere underdimensjonert Ollama-instans
+- Vurder større modell-timeout eller raskere modell
+
+### Success Metrics
+```
+OLLAMA_SUCCESS: Generate completed in 2341ms
+OLLAMA_EMBED_SUCCESS: Embedding completed in 145ms
+```
+- Normalt responstid: 1-5 sekunder for generate
+- Normalt responstid: 100-500ms for embeddings
+
+### Grafana Queries
+```promql
+# Retry rate
+rate(log{app="rag-umami",message=~"OLLAMA_RETRY.*"}[5m])
+
+# Timeout rate  
+rate(log{app="rag-umami",message=~"OLLAMA_TIMEOUT.*"}[5m])
+
+# Average response time
+avg(log{app="rag-umami",message=~"OLLAMA_SUCCESS.*"} | regexp "(?P<duration>\\d+)ms" | unwrap duration)
 ```
 
 ## Resources
