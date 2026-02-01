@@ -1,4 +1,4 @@
-# Rag-umami Maven Setup
+# Jamph-Rag-Api-Umami Maven Setup
 
 **Team JAMPH** - Kotlin API layer with RAG + Ollama
 
@@ -14,7 +14,7 @@
 9. Docker → .env, compose up, create ragumami database
 
 ```
-Umami (Vite) → Rag-umami API (Kotlin/Ktor) → Ollama (LLM)
+Umami (Vite) → Jamph-Rag-Api-Umami API (Kotlin/Ktor) → Ollama (LLM)
                       ↓
             PostgreSQL (External)
 ```
@@ -52,7 +52,7 @@ Replace the generated `pom.xml` with:
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Rag-umami API</name>
+    <name>Jamph-Rag-Api-Umami API</name>
     <description>Kotlin API layer for RAG-based queries with Ollama</description>
 
     <properties>
@@ -62,6 +62,7 @@ Replace the generated `pom.xml` with:
         <logback.version>1.5.26</logback.version>
         <exposed.version>0.57.0</exposed.version>
         <postgresql.version>42.7.4</postgresql.version>
+        <langchain4j.version>0.38.2</langchain4j.version>
         <kotlin.code.style>official</kotlin.code.style>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -149,6 +150,28 @@ Replace the generated `pom.xml` with:
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+        </dependency>
+
+        <!-- LangChain4j - LLM Orchestration -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-ollama</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-embeddings</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-easy-rag</artifactId>
+            <version>${langchain4j.version}</version>
         </dependency>
 
         <!-- Testing -->
@@ -314,7 +337,7 @@ import org.slf4j.event.Level
 fun main() {
     embeddedServer(
         Netty,
-        port = System.getenv("API_PORT")?.toIntOrNull() ?: 8084,
+        port = System.getenv("API_PORT")?.toIntOrNull() ?: 8004,
         host = System.getenv("API_HOST") ?: "0.0.0.0"
     ) {
         configureLogging()
@@ -356,7 +379,7 @@ fun Application.configureCORS() {
 fun Application.configureRouting() {
     routing {
         get("/") {
-            call.respondText("🍜 Rag-umami API is running!")
+            call.respondText("🍜 Jamph-Rag-Api-Umami API is running!")
         }
         
         get("/health") {
@@ -403,7 +426,7 @@ Create `src/main/resources/application.conf`:
 ```hocon
 ktor {
     deployment {
-        port = 8084
+        port = 8004
         port = ${?API_PORT}
     }
     application {
@@ -660,7 +683,7 @@ class ApplicationTest {
         val response = client.get("/")
         
         assertEquals(HttpStatusCode.OK, response.status)
-        assertTrue(response.bodyAsText().contains("Rag-umami"))
+        assertTrue(response.bodyAsText().contains("Jamph-Rag-Api-Umami"))
     }
 }
 ```
@@ -806,8 +829,8 @@ java -jar target/api-1.0-SNAPSHOT-jar-with-dependencies.jar
 ### Verify
 
 ```bash
-curl http://localhost:8084/health
-curl http://localhost:8084/
+curl http://localhost:8004/health
+curl http://localhost:8004/
 ```
 
 ## Step 9: Environment Configuration
@@ -825,7 +848,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2:3b
 
 # API Configuration
-API_PORT=8084
+API_PORT=8004
 API_HOST=0.0.0.0
 
 # Environment
@@ -932,8 +955,8 @@ mvn clean install -U
 ### Port Already in Use
 
 ```powershell
-# Windows: Find process on port 8084
-netstat -ano | findstr :8084
+# Windows: Find process on port 8004
+netstat -ano | findstr :8004
 taskkill /PID <PID> /F
 
 # Or change port in .env
@@ -941,8 +964,8 @@ API_PORT=8081
 ```
 
 ```bash
-# macOS/Linux: Kill process on port 8080
-lsof -ti:8084 | xargs kill -9
+# macOS/Linux: Kill process on port 8004
+lsof -ti:8004 | xargs kill -9
 
 # Or change port in .env
 API_PORT=8081
