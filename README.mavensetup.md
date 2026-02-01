@@ -63,6 +63,7 @@ Replace the generated `pom.xml` with:
         <exposed.version>0.57.0</exposed.version>
         <postgresql.version>42.7.4</postgresql.version>
         <langchain4j.version>0.38.2</langchain4j.version>
+        <mlflow.version>2.18.0</mlflow.version>
         <kotlin.code.style>official</kotlin.code.style>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -172,6 +173,13 @@ Replace the generated `pom.xml` with:
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-easy-rag</artifactId>
             <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- MLflow - Production Monitoring & Experiment Tracking -->
+        <dependency>
+            <groupId>org.mlflow</groupId>
+            <artifactId>mlflow-client</artifactId>
+            <version>${mlflow.version}</version>
         </dependency>
 
         <!-- Testing -->
