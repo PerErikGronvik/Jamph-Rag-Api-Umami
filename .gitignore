@@ -38,6 +38,24 @@ build/
 *~
 .DS_Store
 
+# Java/Kotlin/Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.ipr
+*.iws
+out/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.kotlin/
+
 # Docker
 docker-compose.override.yml
 

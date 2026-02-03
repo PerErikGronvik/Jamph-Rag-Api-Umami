@@ -1,0 +1,32 @@
+# Git
+.git
+.github
+.gitignore
+
+# Maven
+api/target
+**/target
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+docker-compose*.yml
+Dockerfile
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Other
+.nais
+*.png

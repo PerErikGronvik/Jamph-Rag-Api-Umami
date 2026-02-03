@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  jamph-rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jamph-rag-api-umami
+    ports:
+      - "8004:8004"
+    environment:
+      - API_PORT=8004
+      - API_HOST=0.0.0.0
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:3b
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
