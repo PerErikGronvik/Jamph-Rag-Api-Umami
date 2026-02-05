@@ -3,9 +3,11 @@ package no.jamph.ragumami.umami.domain
 import no.jamph.ragumami.core.rag.RAGOrchestrator
 import no.jamph.ragumami.core.rag.QueryContext
 import no.jamph.ragumami.core.llm.OllamaClient
+import no.jamph.ragumami.core.bigquery.BigQuerySchemaService
 
 class UmamiRAGService(
-    private val ollamaClient: OllamaClient
+    private val ollamaClient: OllamaClient,
+    private val bigQueryService: BigQuerySchemaService? = null
 ) {
     suspend fun chat(message: String): String {
         val prompt = """
@@ -19,32 +21,50 @@ class UmamiRAGService(
     }
     
     suspend fun generateSQL(naturalLanguageQuery: String): String {
-        // Umami-specific: Get Prisma schema context
-        val schemaContext = getUmamiSchemaContext()
+        // Get schema context from BigQuery if available, otherwise use fallback
+        val schemaContext = if (bigQueryService != null) {
+            try {
+                bigQueryService.getSchemaContext()
+            } catch (e: Exception) {
+                getFallbackSchemaContext()
+            }
+        } else {
+            getFallbackSchemaContext()
+        }
         
         val prompt = buildSQLPrompt(naturalLanguageQuery, schemaContext)
         
         return ollamaClient.generate(prompt)
     }
     
-    private fun getUmamiSchemaContext(): String {
+    private fun getFallbackSchemaContext(): String {
         return """
-        -- Umami Analytics Database Schema (BigQuery)
-        -- Database: fagtorsdag-prod-81a6.umami_student.public_website
+        === BIGQUERY DATABASE SCHEMA ===
+        Note: BigQuery not configured. Using fallback schema.
         
-        TABLE: `fagtorsdag-prod-81a6.umami_student.public_website`
+        === AVAILABLE WEBSITES ===
+        - Aksel (example)
+        
+        === DATABASE TABLES ===
+        
+        Table: `project.dataset.public_website`
         Columns:
-          - website_id (STRING/INT): Unique identifier for website
-          - name (STRING): Website name
+          - website_id (STRING, REQUIRED) - Unique identifier for website
+          - name (STRING, NULLABLE) - Website name
+          - domain (STRING, NULLABLE) - Website domain
         
-        Default columns to use: website_id, name
+        Table: `project.dataset.event`
+        Columns:
+          - website_id (STRING, REQUIRED) - Reference to website
+          - event_name (STRING, NULLABLE) - Event name
+          - created_at (TIMESTAMP, REQUIRED) - Event timestamp
+          - session_id (STRING, NULLABLE) - Session identifier
+          - url_path (STRING, NULLABLE) - URL path
         
-        Example query:
-        SELECT 
-          website_id,
-          name
-        FROM 
-          `fagtorsdag-prod-81a6.umami_student.public_website`
+        === QUERY INSTRUCTIONS ===
+        - Always use fully qualified table names with backticks
+        - Filter by website_id when querying event tables
+        - Match website names to appropriate website_id values
         """.trimIndent()
     }
     
@@ -53,12 +73,13 @@ class UmamiRAGService(
         You are a BigQuery SQL expert for Umami Analytics.
         
         IMPORTANT INSTRUCTIONS:
-        - Always use the full table name: `fagtorsdag-prod-81a6.umami_student.public_website`
-        - Use backticks (`) for table names in BigQuery
-        - Default columns: website_id, name (use these unless user specifies others)
-        - Return ONLY the SQL query, no explanations or markdown
+        - Generate ONLY valid BigQuery SQL, no explanations or markdown
+        - Use backticks (`) for table names
+        - Always use fully qualified table names as shown in schema
+        - When user mentions a website (like "Aksel"), find the matching website_id from the Available Websites list
+        - Add WHERE website_id = '<matched-id>' when querying event or event_data tables
+        - Return only the SQL query, nothing else
         
-        Database Schema:
         $schema
         
         User Query: $query

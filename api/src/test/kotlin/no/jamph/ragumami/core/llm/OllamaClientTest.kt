@@ -16,7 +16,7 @@ class OllamaClientTest {
     fun setup() {
         wireMock = WireMockServer(WireMockConfiguration.options().dynamicPort())
         wireMock.start()
-        client = OllamaClient("http://localhost:${wireMock.port()}", "llama3.2:3b")
+        client = OllamaClient("http://localhost:${wireMock.port()}", "qwen2.5-coder:7b")
     }
     
     @AfterEach

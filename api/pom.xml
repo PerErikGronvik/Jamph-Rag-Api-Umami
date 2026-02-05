@@ -145,6 +145,18 @@
             <version>${mlflow.version}</version>
         </dependency>
 
+        <!-- Google Cloud BigQuery -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
+            <version>2.42.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>1.25.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -218,6 +230,16 @@
                 <version>3.2.5</version>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
+                </configuration>
+            </plugin>
+
+            <!-- Exec Plugin for running the application -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <mainClass>no.jamph.ragumami.ApplicationKt</mainClass>
                 </configuration>
             </plugin>
 

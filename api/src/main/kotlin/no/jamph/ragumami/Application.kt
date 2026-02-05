@@ -12,8 +12,12 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.http.*
 import org.slf4j.event.Level
+import org.slf4j.LoggerFactory
 import no.jamph.ragumami.core.llm.OllamaClient
+import no.jamph.ragumami.core.bigquery.BigQuerySchemaService
 import no.jamph.ragumami.umami.domain.UmamiRAGService
+
+private val log = LoggerFactory.getLogger("Application")
 
 fun main() {
     embeddedServer(
@@ -61,10 +65,32 @@ fun Application.configureRouting() {
     val ollamaBaseUrl = environment.config.propertyOrNull("ollama.baseUrl")?.getString()
         ?: System.getenv("OLLAMA_BASE_URL") ?: "http://localhost:11434"
     val ollamaModel = environment.config.propertyOrNull("ollama.model")?.getString()
-        ?: System.getenv("OLLAMA_MODEL") ?: "llama3.2:3b"
+        ?: System.getenv("OLLAMA_MODEL") ?: "qwen2.5-coder:7b"
     
     val ollamaClient = OllamaClient(ollamaBaseUrl, ollamaModel)
-    val ragService = UmamiRAGService(ollamaClient)
+    
+    // Initialize BigQuery service if credentials are available
+    val bigQueryService = try {
+        val projectId = environment.config.propertyOrNull("bigquery.projectId")?.getString()
+            ?: System.getenv("BIGQUERY_PROJECT_ID")
+        val dataset = environment.config.propertyOrNull("bigquery.dataset")?.getString()
+            ?: System.getenv("BIGQUERY_DATASET")
+        val location = environment.config.propertyOrNull("bigquery.location")?.getString()
+            ?: System.getenv("BIGQUERY_LOCATION") ?: "europe-north1"
+        val credentialsPath = environment.config.propertyOrNull("bigquery.credentialsPath")?.getString()
+            ?: System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        
+        if (projectId != null && dataset != null) {
+            BigQuerySchemaService(projectId, dataset, location, credentialsPath)
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        log.warn("Failed to initialize BigQuery service: ${e.message}")
+        null
+    }
+    
+    val ragService = UmamiRAGService(ollamaClient, bigQueryService)
     
     routing {
         get("/") {
@@ -72,13 +98,78 @@ fun Application.configureRouting() {
         }
         
         get("/health") {
+            val bigQueryHealthy = bigQueryService?.isHealthy() ?: false
             call.respond(
                 mapOf(
                     "status" to "healthy",
                     "service" to "rag-umami",
-                    "flavor" to "umami"
+                    "flavor" to "umami",
+                    "bigquery" to if (bigQueryHealthy) "connected" else "not configured"
                 )
             )
+        }
+        
+        // BigQuery endpoints
+        get("/api/bigquery/websites") {
+            try {
+                if (bigQueryService == null) {
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        ErrorResponse("BigQuery not configured. Set BIGQUERY_PROJECT_ID and BIGQUERY_DATASET")
+                    )
+                    return@get
+                }
+                val websites = bigQueryService.getWebsites()
+                call.respond(mapOf("websites" to websites))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Failed to fetch websites")
+                )
+            }
+        }
+        
+        get("/api/bigquery/schema") {
+            try {
+                if (bigQueryService == null) {
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        ErrorResponse("BigQuery not configured. Set BIGQUERY_PROJECT_ID and BIGQUERY_DATASET")
+                    )
+                    return@get
+                }
+                val schemaContext = bigQueryService.getSchemaContext()
+                call.respond(mapOf("schema" to schemaContext))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Failed to fetch schema")
+                )
+            }
+        }
+        
+        get("/api/bigquery/tables/{tableName}") {
+            try {
+                if (bigQueryService == null) {
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        ErrorResponse("BigQuery not configured. Set BIGQUERY_PROJECT_ID and BIGQUERY_DATASET")
+                    )
+                    return@get
+                }
+                val tableName = call.parameters["tableName"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Table name required"))
+                
+                val schema = bigQueryService.getTableSchema(tableName)
+                call.respond(schema)
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Table not found"))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Failed to fetch table schema")
+                )
+            }
         }
         
         post("/api/chat") {
@@ -91,7 +182,7 @@ fun Application.configureRouting() {
                     ollamaClient
                 }
                 val serviceToUse = if (clientToUse !== ollamaClient) {
-                    UmamiRAGService(clientToUse)
+                    UmamiRAGService(clientToUse, bigQueryService)
                 } else {
                     ragService
                 }
@@ -115,7 +206,7 @@ fun Application.configureRouting() {
                     ollamaClient
                 }
                 val serviceToUse = if (clientToUse !== ollamaClient) {
-                    UmamiRAGService(clientToUse)
+                    UmamiRAGService(clientToUse, bigQueryService)
                 } else {
                     ragService
                 }
