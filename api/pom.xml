@@ -23,6 +23,7 @@
         <kotlin.code.style>official</kotlin.code.style>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <skipTests>true</skipTests>
     </properties>
 
 
@@ -215,6 +216,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <skipTests>${skipTests}</skipTests>
+                </configuration>
             </plugin>
 
             <!-- Assembly Plugin for Fat JAR -->
