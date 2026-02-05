@@ -84,7 +84,18 @@ fun Application.configureRouting() {
         post("/api/chat") {
             try {
                 val request = call.receive<ChatRequest>()
-                val response = ragService.chat(request.message)
+                // Use model from request if provided, otherwise use default
+                val clientToUse = if (request.model != null && request.model != ollamaModel) {
+                    OllamaClient(ollamaBaseUrl, request.model)
+                } else {
+                    ollamaClient
+                }
+                val serviceToUse = if (clientToUse !== ollamaClient) {
+                    UmamiRAGService(clientToUse)
+                } else {
+                    ragService
+                }
+                val response = serviceToUse.chat(request.message)
                 call.respond(ChatResponse(response))
             } catch (e: Exception) {
                 call.respond(
@@ -97,7 +108,18 @@ fun Application.configureRouting() {
         post("/api/sql") {
             try {
                 val request = call.receive<SQLRequest>()
-                val sql = ragService.generateSQL(request.query)
+                // Use model from request if provided, otherwise use default
+                val clientToUse = if (request.model != null && request.model != ollamaModel) {
+                    OllamaClient(ollamaBaseUrl, request.model)
+                } else {
+                    ollamaClient
+                }
+                val serviceToUse = if (clientToUse !== ollamaClient) {
+                    UmamiRAGService(clientToUse)
+                } else {
+                    ragService
+                }
+                val sql = serviceToUse.generateSQL(request.query)
                 call.respond(SQLResponse(sql))
             } catch (e: Exception) {
                 call.respond(
@@ -109,8 +131,8 @@ fun Application.configureRouting() {
     }
 }
 
-data class ChatRequest(val message: String)
+data class ChatRequest(val message: String, val model: String? = null)
 data class ChatResponse(val response: String)
-data class SQLRequest(val query: String)
+data class SQLRequest(val query: String, val model: String? = null)
 data class SQLResponse(val sql: String)
 data class ErrorResponse(val error: String)

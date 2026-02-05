@@ -28,23 +28,42 @@ class UmamiRAGService(
     }
     
     private fun getUmamiSchemaContext(): String {
-        // TODO: Read Umami's Prisma schema
         return """
-        -- Umami Analytics Database Schema
-        -- Tables: website, session, event, pageview, etc.
+        -- Umami Analytics Database Schema (BigQuery)
+        -- Database: fagtorsdag-prod-81a6.umami_student.public_website
+        
+        TABLE: `fagtorsdag-prod-81a6.umami_student.public_website`
+        Columns:
+          - website_id (STRING/INT): Unique identifier for website
+          - name (STRING): Website name
+        
+        Default columns to use: website_id, name
+        
+        Example query:
+        SELECT 
+          website_id,
+          name
+        FROM 
+          `fagtorsdag-prod-81a6.umami_student.public_website`
         """.trimIndent()
     }
     
     private fun buildSQLPrompt(query: String, schema: String): String {
         return """
-        You are a SQL expert. Generate PostgreSQL query for:
+        You are a BigQuery SQL expert for Umami Analytics.
         
-        Schema:
+        IMPORTANT INSTRUCTIONS:
+        - Always use the full table name: `fagtorsdag-prod-81a6.umami_student.public_website`
+        - Use backticks (`) for table names in BigQuery
+        - Default columns: website_id, name (use these unless user specifies others)
+        - Return ONLY the SQL query, no explanations or markdown
+        
+        Database Schema:
         $schema
         
         User Query: $query
         
-        Return only the SQL query, no explanations.
+        Generate the BigQuery SQL query:
         """.trimIndent()
     }
 }
