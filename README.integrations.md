@@ -6,7 +6,7 @@ Denne guiden forklarer hvordan du konfigurerer integrasjonene mellom Jamph-Rag-A
 
 ### 1. Ollama LLM Adresse
 
-**Fil:** [`api/src/main/resources/application.conf`](api/src/main/resources/application.conf)
+**Fil:** [`src/main/resources/application.conf`](src/main/resources/application.conf)
 
 ```properties
 ollama {
@@ -46,7 +46,7 @@ export OLLAMA_MODEL="llama3.2:3b"
 
 ### 2. Umami Frontend Adresse
 
-**Fil:** [`api/src/main/kotlin/no/jamph/ragumami/Application.kt`](api/src/main/kotlin/no/jamph/ragumami/Application.kt)
+**Fil:** [`src/main/kotlin/no/jamph/ragumami/Application.kt`](src/main/kotlin/no/jamph/ragumami/Application.kt)
 
 Finn `configureCORS()` funksjonen og oppdater `allowHost()` med din frontend-adresse:
 

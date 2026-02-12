@@ -279,7 +279,7 @@ console.log(sqlQuery);
 
 ### Backend Configuration
 
-**File:** `api/src/main/resources/application.conf`
+**File:** `src/main/resources/application.conf`
 
 ```hocon
 ollama {
@@ -308,7 +308,7 @@ export API_PORT="8004"
 
 ### CORS Configuration
 
-**File:** `api/src/main/kotlin/no/jamph/ragumami/Application.kt`
+**File:** `src/main/kotlin/no/jamph/ragumami/Application.kt`
 
 Currently configured to allow:
 - `localhost:3000`
@@ -350,17 +350,18 @@ curl http://localhost:11434/api/tags
 ### 2. Start the Backend API
 
 ```bash
-cd Jamph-Rag-Api-Umami/api
+# Option A: Using PowerShell script (Recommended)
+.\start-api.ps1
 
-# Option A: Using Maven
+# Option B: Using Maven
 mvn clean install
 mvn exec:java -Dexec.mainClass="no.jamph.ragumami.ApplicationKt"
 
-# Option B: Run the JAR
+# Option C: Run the JAR
+mvn clean package -DskipTests
 java -jar target/api-1.0-SNAPSHOT-jar-with-dependencies.jar
 
-# Option C: Using Docker
-cd ..
+# Option D: Using Docker
 docker compose -f docker-compose.dev.yml up
 ```
 

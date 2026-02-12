@@ -3,14 +3,13 @@
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
-$ApiDir = Join-Path $ProjectRoot "api"
 
 Write-Host "🚀 Starting Jamph-Rag-Api-Umami" -ForegroundColor Cyan
 Write-Host "=" * 60
 
 # Check if in correct directory
-if (-not (Test-Path $ApiDir)) {
-    Write-Host "❌ Error: api directory not found!" -ForegroundColor Red
+if (-not (Test-Path (Join-Path $ProjectRoot "pom.xml"))) {
+    Write-Host "❌ Error: pom.xml not found!" -ForegroundColor Red
     Write-Host "Please run this script from the project root directory." -ForegroundColor Yellow
     exit 1
 }
@@ -47,7 +46,6 @@ if ($portInUse) {
 Write-Host "`n[3/3] Building and starting API..." -ForegroundColor Yellow
 Write-Host "This may take a moment on first run..." -ForegroundColor Gray
 
-Push-Location $ApiDir
 try {
     # Check if already built
     $jarPath = "target\api-1.0-SNAPSHOT-jar-with-dependencies.jar"
@@ -69,7 +67,4 @@ try {
     
     # Run the application
     java -jar $jarPath
-    
-} finally {
-    Pop-Location
 }

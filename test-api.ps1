@@ -25,7 +25,7 @@ try {
     Write-Host "   Service: $($healthResponse.service)" -ForegroundColor Gray
 } catch {
     Write-Host "❌ Backend API is NOT running" -ForegroundColor Red
-    Write-Host "   Start with: mvn exec:java -Dexec.mainClass=`"no.jamph.ragumami.ApplicationKt`"" -ForegroundColor Yellow
+    Write-Host "   Start with: .\start-api.ps1 or mvn exec:java" -ForegroundColor Yellow
 }
 
 # Test 3: Test Chat Endpoint

@@ -28,7 +28,7 @@ jobs:
         id: docker-build-push
         with:
           team: team-jamph
-          # dockerfile: path til dockerfile - legg til når Dockerfile er opprettet
+          dockerfile: Dockerfile
           
       - name: Deploy to Nais
         uses: nais/deploy/actions/deploy@v2

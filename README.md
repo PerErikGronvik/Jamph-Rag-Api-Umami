@@ -31,24 +31,16 @@ ollama serve
 ```
 *Automatically checks Ollama, builds, and runs the API*
 
-**Option B: Manual - From api directory**
+**Option B: Manual**
 ```powershell
-cd api
 mvn clean package -DskipTests
 java -jar target/api-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-**Option C: Using Maven exec (from api directory)**
+**Option C: Using Maven exec**
 ```bash
-cd api
 mvn clean install
 mvn exec:java -Dexec.mainClass="no.jamph.ragumami.ApplicationKt"
-```
-
-**Option D: From root directory (single command)**
-```bash
-mvn -f api/pom.xml clean package -DskipTests
-java -jar api/target/api-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 ### 3. Verify
@@ -102,7 +94,7 @@ Content-Type: application/json
 
 ## 🔧 Configuration
 
-Edit `api/src/main/resources/application.conf`:
+Edit `src/main/resources/application.conf`:
 ```hocon
 ollama {
     baseUrl = "http://localhost:11434"
@@ -130,7 +122,6 @@ export API_PORT="8004"
 ## 📁 Project Structure
 
 ```
-api/
 ├── pom.xml
 ├── src/
 │   ├── main/
