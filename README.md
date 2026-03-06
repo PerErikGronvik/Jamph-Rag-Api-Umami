@@ -4,9 +4,30 @@ Kotlin RAG API that connects Umami Analytics with an Ollama LLM for natural lang
 
 ## Requirements
 
-- Java 21+
+- Java 21 LTS (Java 21+)
 - Maven 3.9+
 - Ollama (optional — only needed for `/api/chat` and `/api/sql`)
+
+### Mac/Linux Setup
+
+If Maven or Java 21 are not installed, install them via Homebrew:
+
+```bash
+brew install maven openjdk@21
+```
+
+Then add Java 21 to your PATH in `~/.zshrc`:
+
+```bash
+export PATH="/usr/local/opt/openjdk@21/bin:$PATH"
+export JAVA_HOME="/usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+```
+
+Apply the changes:
+
+```bash
+source ~/.zshrc
+```
 
 ## Start the API
 
@@ -21,7 +42,7 @@ mvn clean package -Dmaven.test.skip=true
 java -jar target/api-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-API runs on `http://localhost:8004`.
+The API will start on `http://localhost:8004`.
 
 ## Verify
 
