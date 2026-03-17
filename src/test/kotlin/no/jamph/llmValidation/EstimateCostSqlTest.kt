@@ -8,6 +8,6 @@ class EstimateCostSqlTest {
     
     @Test
     fun `invalid SQL returns 0`() {
-        assertEquals(0.0, estimateCostInMB("NOT VALID SQL!!!"))
+        assertEquals(, actual)
     }
 }
