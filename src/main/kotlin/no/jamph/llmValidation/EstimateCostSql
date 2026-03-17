@@ -1,0 +1,5 @@
+import com.google.cloud.bigquery.*
+
+fun estimateCostInMB (sql: String) : Long {
+    va
+}
