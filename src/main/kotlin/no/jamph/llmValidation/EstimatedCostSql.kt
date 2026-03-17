@@ -15,7 +15,7 @@ fun estimateCostInMB(sql: String): Double {
         val job = bigquery.create(JobInfo.of(config))
         val stats = job.getStatistics<JobStatistics.QueryStatistics>()
         val bytesProcessed: Long = stats.totalBytesProcessed ?: 0L
-        bytesProcessed.toDouble() / (1024 * 1024) // MB
+        bytesProcessed.toDouble() / (1024.0 * 1024.0) // MB
     } catch (e: Exception) {
         println("Error estimating query size: ${e.message}")
         0.0
