@@ -8,7 +8,7 @@ import kotlinx.coroutines.runBlocking
 fun DialectValidetaLlmToSql(
     modellName: String,
     generateFn: suspend (String) -> String = { prompt ->
-        OllamaClient(baseUrl = "http://localhost:11434", model = modellName).generate(prompt)
+        OllamaClient(baseUrl = System.getenv("OLLAMA_BASE_URL") ?: "http://localhost:11434", model = modellName).generate(prompt)
     }
 ): Double {
     return runBlocking {
