@@ -11,7 +11,7 @@ data class TokenSpeedResult(
 )
 
 class TokenSpeedMeasurer(
-    private val ollamaBaseUrl: String = System.getenv("OLLAMA_BASE_URL") ?: "http://localhost:11434",
+    private val ollamaBaseUrl: String = System.getenv("OLLAMA_BASE_URL") ?: "https://jamph-ollama.ekstern.dev.nav.no/",
     private val model: String
 ) {
 
