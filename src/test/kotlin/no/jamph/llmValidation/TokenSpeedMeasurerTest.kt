@@ -3,6 +3,7 @@ package no.jamph.llmValidation
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import com.github.tomakehurst.wiremock.stubbing.Scenario
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.*
 import kotlin.test.assertEquals
@@ -78,10 +79,34 @@ class TokenSpeedMeasurerTest {
 
     @Test
     fun `measure returns zero result when Ollama is unavailable`() = runBlocking {
+        // Use a WireMock Scenario to avoid persistent 5xx responses that would
+        // trigger multiple retries with exponential backoff in OllamaClient.
+        // First call: 500 Internal Server Error.
         wireMock.stubFor(
             post(urlEqualTo("/api/generate"))
-                .willReturn(aResponse().withStatus(500).withBody("Internal Server Error"))
+                .inScenario("ollama-unavailable")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(
+                    aResponse()
+                        .withStatus(500)
+                        .withBody("Internal Server Error")
+                )
+                .willSetStateTo("OLLAMA_RECOVERS")
         )
+
+        // Subsequent calls: 200 OK with a non-JSON body, still exercising the
+        // zero-result/error-handling path without further 5xx retries.
+        wireMock.stubFor(
+            post(urlEqualTo("/api/generate"))
+                .inScenario("ollama-unavailable")
+                .whenScenarioStateIs("OLLAMA_RECOVERS")
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withBody("Ollama recovered but returned invalid JSON")
+                )
+        )
+
         val result = measurer.measure("Show all events")
         assertEquals(0, result.promptTokens)
         assertEquals(0, result.responseTokens)
