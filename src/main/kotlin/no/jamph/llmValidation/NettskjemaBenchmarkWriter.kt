@@ -20,14 +20,14 @@ private data class NettskjemaSubmission(
 
 class NettskjemaBenchmarkWriter(
     private val formId: Long = 614069L,
-    private val qModel:           Long = TODO("fyll inn elementId for Model"),
-    private val qTimestamp:       Long = TODO("fyll inn elementId for Timestamp"),
-    private val qSqlAccuracy:     Long = TODO("fyll inn elementId for SQL Accuracy (%)"),
-    private val qDialectAccuracy: Long = TODO("fyll inn elementId for Dialect Accuracy (%)"),
-    private val qTokensPerSec:    Long = TODO("fyll inn elementId for Tokens/sec"),
-    private val qPromptTokens:    Long = TODO("fyll inn elementId for Prompt Tokens"),
-    private val qResponseTokens:  Long = TODO("fyll inn elementId for Response Tokens"),
-    private val qEvalDurationMs:  Long = TODO("fyll inn elementId for Eval Duration (ms)")
+    private val qModel:           Long = 9106646,
+    private val qTimestamp:       Long = 9106647,
+    private val qSqlAccuracy:     Long = 9106648,
+    private val qDialectAccuracy: Long = 9106649,
+    private val qTokensPerSec:    Long = 9106650,
+    private val qPromptTokens:    Long = 9106651,
+    private val qResponseTokens:  Long = 9106652,
+    private val qEvalDurationMs:  Long = 9106653
 ) {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) { gson() }

@@ -46,14 +46,7 @@ fun runBenchmark(
 }
 
 fun main() {
-    val models = listOf(
-        "qwen2.5-coder:1.5b",
-        "qwen2.5-coder:1.5b-instruct-fp16",
-        "qwen2.5-coder:1.5b-instruct-q8_0",
-        "qwen2.5-coder:1.5b-instruct-q4_K_M",
-        "qwen2.5-coder:3b",
-        "qwen3:1.5b-fp16"
-    )
+    val models = listOf("deepseek-coder-v2:16b")  // test one first
 
     val results = runBenchmark(models)
     NettskjemaBenchmarkWriter().appendRows(results)
