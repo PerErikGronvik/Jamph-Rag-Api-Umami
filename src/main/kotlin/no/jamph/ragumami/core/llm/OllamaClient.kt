@@ -1,5 +1,6 @@
 package no.jamph.ragumami.core.llm
 
+import com.google.gson.JsonParser
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -62,10 +63,10 @@ class OllamaClient(
             
             val duration = System.currentTimeMillis() - startTime
             logger.info("OLLAMA_SUCCESS: Generate completed in {}ms", duration)
-
+            
             val body = response.bodyAsText()
-            val json = com.google.gson.Gson().fromJson(body, Map::class.java)
-            json["response"] as? String ?: body
+            val json = JsonParser.parseString(body).asJsonObject
+            json.get("response")?.asString ?: body
             
         } catch (e: HttpRequestTimeoutException) {
             logger.error("OLLAMA_TIMEOUT: Request timed out after 120s for model: {}", model, e)
