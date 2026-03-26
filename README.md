@@ -1,3 +1,5 @@
+## EndringerTilNavIkt
+
 # Jamph-Rag-Api-Umami
 
 Kotlin RAG API that connects Umami Analytics with an Ollama LLM for natural language queries and SQL generation.
