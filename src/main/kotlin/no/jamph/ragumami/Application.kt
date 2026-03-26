@@ -13,10 +13,13 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.http.*
 import org.slf4j.event.Level
 import org.slf4j.LoggerFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.bigquery.BigQueryQueryService
 import no.jamph.bigquery.BigQuerySchemaService
 import no.jamph.ragumami.umami.domain.UmamiRAGService
+import no.jamph.llmValidation.runBenchmark
 
 private val log = LoggerFactory.getLogger("Application")
 
@@ -221,6 +224,23 @@ fun Application.configureRouting() {
                 )
             }
         }
+        
+        post("/api/benchmark") {
+            try {
+                val request = call.receive<BenchmarkRequest>()
+                val model = request.model ?: ollamaModel
+                val benchmarkOllamaUrl = request.ollamaBaseUrl ?: ollamaBaseUrl
+                val results = withContext(Dispatchers.IO) {
+                    runBenchmark(listOf(model), benchmarkOllamaUrl)
+                }
+                call.respond(results.first())
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Benchmark failed")
+                )
+            }
+        }
     }
 }
 
@@ -228,4 +248,5 @@ data class ChatRequest(val message: String, val model: String? = null)
 data class ChatResponse(val response: String)
 data class SQLRequest(val query: String, val model: String? = null)
 data class SQLResponse(val sql: String)
+data class BenchmarkRequest(val model: String? = null, val ollamaBaseUrl: String? = null)
 data class ErrorResponse(val error: String)
