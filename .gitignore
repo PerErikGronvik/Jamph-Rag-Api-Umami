@@ -79,4 +79,7 @@ models/
 # OS files
 Thumbs.db
 .DS_Store
+package-lock.json
+
+# Secrets
 fagtorsdag-prod-81a6-52ac69097f46.json
