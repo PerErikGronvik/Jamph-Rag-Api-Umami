@@ -12,6 +12,41 @@ import io.ktor.http.*
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
 
+private val resolveLogger = LoggerFactory.getLogger("OllamaModelResolver")
+
+suspend fun resolveActiveOllamaModel(baseUrl: String): String? {
+    val client = HttpClient(CIO)
+    return try {
+        // First: check currently loaded (running) model
+        val psResponse = client.get("$baseUrl/api/ps")
+        val psJson = JsonParser.parseString(psResponse.bodyAsText()).asJsonObject
+        val running = psJson.getAsJsonArray("models")
+        if (running != null && running.size() > 0) {
+            val model = running[0].asJsonObject.get("name").asString
+            resolveLogger.info("OLLAMA_MODEL_RESOLVED: Using running model '{}'" , model)
+            return model
+        }
+
+        // Fallback: first locally available model
+        val tagsResponse = client.get("$baseUrl/api/tags")
+        val tagsJson = JsonParser.parseString(tagsResponse.bodyAsText()).asJsonObject
+        val models = tagsJson.getAsJsonArray("models")
+        if (models != null && models.size() > 0) {
+            val model = models[0].asJsonObject.get("name").asString
+            resolveLogger.info("OLLAMA_MODEL_RESOLVED: No running model, using first available '{}'" , model)
+            model
+        } else {
+            resolveLogger.warn("OLLAMA_MODEL_RESOLVED: No models found locally")
+            null
+        }
+    } catch (e: Exception) {
+        resolveLogger.warn("OLLAMA_MODEL_RESOLVED: Could not resolve active model: {}", e.message)
+        null
+    } finally {
+        client.close()
+    }
+}
+
 class OllamaClient(
     private val baseUrl: String,
     private val model: String

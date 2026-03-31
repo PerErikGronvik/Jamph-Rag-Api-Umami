@@ -13,7 +13,9 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.http.*
 import org.slf4j.event.Level
 import org.slf4j.LoggerFactory
+import kotlinx.coroutines.runBlocking
 import no.jamph.ragumami.core.llm.OllamaClient
+import no.jamph.ragumami.core.llm.resolveActiveOllamaModel
 import no.jamph.bigquery.BigQueryQueryService
 import no.jamph.bigquery.BigQuerySchemaService
 import no.jamph.ragumami.umami.domain.UmamiRAGService
@@ -66,7 +68,9 @@ fun Application.configureRouting() {
     val ollamaBaseUrl = environment.config.propertyOrNull("ollama.baseUrl")?.getString()
         ?: System.getenv("OLLAMA_BASE_URL") ?: "http://localhost:11434"
     val ollamaModel = environment.config.propertyOrNull("ollama.model")?.getString()
-        ?: System.getenv("OLLAMA_MODEL") ?: "qwen2.5-coder:7b"
+        ?: System.getenv("OLLAMA_MODEL")
+        ?: runBlocking { resolveActiveOllamaModel(ollamaBaseUrl) }
+        ?: "qwen2.5-coder:7b"
     
     val ollamaClient = OllamaClient(ollamaBaseUrl, ollamaModel)
     
