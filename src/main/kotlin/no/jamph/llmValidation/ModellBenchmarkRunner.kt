@@ -19,14 +19,16 @@ private const val SPEED_PROBE = "Write a BigQuery SQL query that counts rows in 
 
 fun runBenchmark(
     models: List<String>,
-    ollamaBaseUrl: String = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl
+    ollamaBaseUrl: String = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl,
+    llmSqlLogicFn: (String) -> Double = { model -> LlmSqlLogic(model) },
+    dialectValidateFn: (String) -> Double = { model -> DialectValidetaLlmToSql(model) }
 ): List<ModelBenchmarkResult> = models.map { model ->
     println("▶ Benchmarking: $model")
 
-    val sqlAccuracy = LlmSqlLogic(model)
+    val sqlAccuracy = llmSqlLogicFn(model)
     println("  SQL accuracy:     ${"%.0f".format(sqlAccuracy * 100)}%")
 
-    val dialectAccuracy = DialectValidetaLlmToSql(model)
+    val dialectAccuracy = dialectValidateFn(model)
     println("  Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
 
     val speedResult = runBlocking {
