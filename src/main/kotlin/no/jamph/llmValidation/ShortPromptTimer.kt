@@ -1,7 +1,7 @@
 
 package no.jamph.llmValidation
 
-import no.jamph.ragumami.umami.domain.UmamiRAGService
+import no.jamph.ragumami.umami.UmamiRAGService
 import no.jamph.llmValidation.SHORT_PROMPT_MAX
 import org.slf4j.LoggerFactory
 

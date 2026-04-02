@@ -1,6 +1,6 @@
 package no.jamph.llmValidation
 
-import no.jamph.ragumami.umami.domain.UmamiRAGService
+import no.jamph.ragumami.umami.UmamiRAGService
 import org.slf4j.LoggerFactory
 
 const val LONG_CONTEXT_THRESHOLD = 1000
