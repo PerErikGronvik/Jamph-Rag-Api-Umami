@@ -129,7 +129,7 @@ fun Application.configureRouting() {
             ?: "fagtorsdag-prod-81a6"  // hardcoded fallback, same as frontend
         val dataset = environment.config.propertyOrNull("bigquery.dataset")?.getString()
             ?: System.getenv("BIGQUERY_DATASET")
-            ?: "analytics_315058498"  // default Umami dataset
+            ?: "umami_student"  // default Umami dataset
         val location = environment.config.propertyOrNull("bigquery.location")?.getString()
             ?: System.getenv("BIGQUERY_LOCATION") ?: "europe-north1"
         
