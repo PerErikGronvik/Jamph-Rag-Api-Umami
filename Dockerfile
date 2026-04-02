@@ -40,8 +40,7 @@ EXPOSE 8004
 
 # Environment variables with defaults (OLLAMA_BASE_URL is sourced from routes.env at runtime)
 ENV API_PORT=8004 \
-    API_HOST=0.0.0.0 \
-    OLLAMA_MODEL=llama3.2:3b
+    API_HOST=0.0.0.0
 
 # Run the application
 ENTRYPOINT ["/app/entrypoint.sh"]
