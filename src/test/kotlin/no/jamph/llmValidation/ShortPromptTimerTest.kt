@@ -6,7 +6,7 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import kotlinx.coroutines.runBlocking
 import no.jamph.ragumami.core.llm.OllamaClient
-import no.jamph.ragumami.umami.domain.UmamiRAGService
+import no.jamph.ragumami.umami.UmamiRAGService
 import org.junit.jupiter.api.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
