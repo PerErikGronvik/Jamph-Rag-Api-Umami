@@ -52,9 +52,9 @@ fun runBenchmark(
 }
 
 fun main() {
-    val models = listOf("deepseek-coder-v2:16b")  // test one first
+    val models = listOf("qwen2.5-coder:7b")
 
     val results = runBenchmark(models)
-    NettskjemaBenchmarkWriter().appendRows(results)
+    CsvBenchmarkWriter().appendRows(results)
 }
 */
