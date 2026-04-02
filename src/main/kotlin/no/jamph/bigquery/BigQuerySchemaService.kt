@@ -101,7 +101,6 @@ class BigQuerySchemaService(
      * Generates a comprehensive schema context for LLM prompts.
      */
     fun getSchemaContext(): String {
-        val websites = getWebsites()
         val tables = listTables()
 
         val schemaBuilder = StringBuilder()
@@ -109,16 +108,6 @@ class BigQuerySchemaService(
         schemaBuilder.appendLine("=== BIGQUERY DATABASE SCHEMA ===")
         schemaBuilder.appendLine("Project: $projectId")
         schemaBuilder.appendLine("Dataset: $dataset")
-        schemaBuilder.appendLine()
-
-        schemaBuilder.appendLine("=== AVAILABLE WEBSITES ===")
-        if (websites.isEmpty()) {
-            schemaBuilder.appendLine("No websites found")
-        } else {
-            websites.forEach { website ->
-                schemaBuilder.appendLine("- ${website.name} (ID: ${website.websiteId}, Domain: ${website.domain ?: "N/A"})")
-            }
-        }
         schemaBuilder.appendLine()
 
         schemaBuilder.appendLine("=== DATABASE TABLES ===")
@@ -135,13 +124,6 @@ class BigQuerySchemaService(
                 schemaBuilder.appendLine("\nTable: `$projectId.$dataset.$tableName` - Error reading schema: ${e.message}")
             }
         }
-
-        schemaBuilder.appendLine()
-        schemaBuilder.appendLine("=== QUERY INSTRUCTIONS ===")
-        schemaBuilder.appendLine("- Always use fully qualified table names: `$projectId.$dataset.table_name`")
-        schemaBuilder.appendLine("- Use backticks (`) around table names")
-        schemaBuilder.appendLine("- Filter by website_id when querying event or event_data tables")
-        schemaBuilder.appendLine("- Match website names from user queries to website_id values listed above")
 
         return schemaBuilder.toString()
     }
