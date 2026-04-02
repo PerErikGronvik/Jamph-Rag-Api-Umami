@@ -146,7 +146,7 @@ private fun buildLlmSqlPrompt(question: String, url: String, schemaContext: Stri
     - Generate ONLY valid BigQuery SQL, no explanations or markdown
     - Use backticks (`) for table names
     - Always use fully qualified table names as shown in schema
-    - The user is viewing the website: ${'$'}url — use this domain to find the matching website_id from the Available Websites list
+    - The user is viewing the website: $url — use this domain to find the matching website_id from the Available Websites list
     - Add WHERE website_id = '<matched-id>' when querying event or event_data tables
     - Return only the SQL query, nothing else
 
