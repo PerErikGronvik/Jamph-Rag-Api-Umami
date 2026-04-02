@@ -28,7 +28,7 @@ import com.google.gson.JsonParser
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.bigquery.BigQueryQueryService
 import no.jamph.bigquery.BigQuerySchemaService
-import no.jamph.ragumami.umami.domain.UmamiRAGService
+import no.jamph.ragumami.umami.UmamiRAGService
 import no.jamph.llmValidation.runBenchmark
 import no.jamph.llmValidation.ModelBenchmarkResult
 import no.jamph.llmValidation.LlmSqlLogic
