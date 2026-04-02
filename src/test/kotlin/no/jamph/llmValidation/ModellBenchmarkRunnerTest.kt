@@ -109,8 +109,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("model-a", "model-b"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.8 },
-            dialectValidateFn = { _ -> 0.9 }
+            llmSqlLogicFn     = { _, _ -> 0.8 },
+            dialectValidateFn = { _, _ -> 0.9 }
         )
         assertEquals(2, results.size)
     }
@@ -120,8 +120,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("deepseek-coder"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.8 },
-            dialectValidateFn = { _ -> 0.9 }
+            llmSqlLogicFn     = { _, _ -> 0.8 },
+            dialectValidateFn = { _, _ -> 0.9 }
         )
         assertEquals("deepseek-coder", results[0].model)
     }
@@ -131,8 +131,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("test-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertTrue(results[0].timestamp.matches(Regex("\\d{4}-\\d{2}-\\d{2}T.*Z")))
     }
@@ -143,8 +143,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("bench-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertEquals(50.0, results[0].tokensPerSecond, 0.01)
     }
@@ -154,8 +154,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("bench-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertEquals(50, results[0].promptTokens)
         assertEquals(100, results[0].responseTokens)
@@ -167,8 +167,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("bench-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertEquals(2000L, results[0].evalDurationMs)
     }
@@ -178,8 +178,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("bench-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.75 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.75 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertEquals(0.75, results[0].sqlAccuracy, 0.001)
     }
@@ -189,8 +189,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("bench-model"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 1.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 1.0 }
         )
         assertEquals(1.0, results[0].dialectAccuracy, 0.001)
     }
@@ -201,8 +201,8 @@ class ModellBenchmarkRunnerTest {
         runBenchmark(
             models            = listOf("llama3", "qwen"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { m -> seenModels += m; 1.0 },
-            dialectValidateFn = { _ -> 1.0 }
+            llmSqlLogicFn     = { m, _ -> seenModels += m; 1.0 },
+            dialectValidateFn = { _, _ -> 1.0 }
         )
         assertEquals(listOf("llama3", "qwen"), seenModels)
     }
@@ -212,8 +212,8 @@ class ModellBenchmarkRunnerTest {
         val results = runBenchmark(
             models            = listOf("alpha", "beta", "gamma"),
             ollamaBaseUrl     = wireMockUrl(),
-            llmSqlLogicFn     = { _ -> 0.0 },
-            dialectValidateFn = { _ -> 0.0 }
+            llmSqlLogicFn     = { _, _ -> 0.0 },
+            dialectValidateFn = { _, _ -> 0.0 }
         )
         assertEquals(listOf("alpha", "beta", "gamma"), results.map { it.model })
     }
