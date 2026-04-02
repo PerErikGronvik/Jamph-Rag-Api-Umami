@@ -36,7 +36,7 @@ fun LlmSqlLogic(
 
     val testCases = listOf(
         TestCase(
-            question = "Daglige sidevisninger i 2025",
+            question = "Hvor mange sidevisninger er det per dag i 2025",
             url = "https://aksel.nav.no",
             rules = listOf(
                 Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
@@ -61,7 +61,7 @@ fun LlmSqlLogic(
             )
         ),
         TestCase(
-            question = "Sidevisninger per måned i 2025",
+            question = "Hvor mange sidevisninger er det per måned i 2025",
             url = "https://aksel.nav.no",
             rules = listOf(
                 Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
@@ -72,7 +72,7 @@ fun LlmSqlLogic(
             )
         ),
         TestCase(
-            question = "Trafikkilder i november 2025",
+            question = "Hva er topp 15 trafikkilder i november 2025",
             url = "https://aksel.nav.no",
             rules = listOf(
                 Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
@@ -84,7 +84,7 @@ fun LlmSqlLogic(
             )
         ),
         TestCase(
-            question = "Eksterne nettsider besøkende kommer fra",
+            question = "Hvilke nettsider kommer besøkere til siden fra",
             url = "https://aksel.nav.no",
             rules = listOf(
                 Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
@@ -105,14 +105,16 @@ fun LlmSqlLogic(
             )
         ),
         TestCase(
-            question = "Nøkkeltall: handlinger, navigering og frafall",
+            question = "Kan jeg få fire tall for katgoriene. Unike besøkende, Utførte handlinger, Navigering uten handling, Forlot nettstedet",
             url = "https://aksel.nav.no",
             rules = listOf(
                 Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
-                Rule("contains '2025'") { sql -> sql.contains("2025") },
+                Rule("contains WITH (CTE)") { sql -> sql.uppercase().contains("WITH") },
                 Rule("contains session_id") { sql -> sql.lowercase().contains("session_id") },
-                Rule("contains UNION ALL or COUNTIF") { sql -> sql.uppercase().contains("UNION ALL") || sql.uppercase().contains("COUNTIF") },
+                Rule("contains UNION ALL") { sql -> sql.uppercase().contains("UNION ALL") },
+                Rule("contains COUNTIF") { sql -> sql.uppercase().contains("COUNTIF") },
+                Rule("contains event_type") { sql -> sql.uppercase().contains("EVENT_TYPE") },
             )
         ),
         TestCase(
