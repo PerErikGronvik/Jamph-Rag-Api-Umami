@@ -5,6 +5,9 @@ metadata:
   namespace: team-researchops
   labels:
     team: team-researchops
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
 spec:
   image: "{{ image }}"
   port: 8004

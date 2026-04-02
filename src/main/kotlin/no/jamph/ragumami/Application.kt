@@ -307,6 +307,14 @@ fun Application.configureRouting() {
             }
             
             coroutineScope {
+                // Heartbeat: send SSE comment every 20s to keep connection alive
+                val heartbeatJob = launch {
+                    while (true) {
+                        kotlinx.coroutines.delay(20_000)
+                        events.trySend(": heartbeat\n\n")
+                    }
+                }
+                
                 launch(Dispatchers.IO) {
                     try {
                         // Step 1: Test BigQuery connection
@@ -321,7 +329,14 @@ fun Application.configureRouting() {
                         if (bqOk) {
                             emitEvent("debug", "BigQuery: connected")
                         } else if (bigQueryService != null) {
-                            emitEvent("debug", "BigQuery: initialized but health check failed")
+                            // Re-run to capture the actual exception message
+                            val detail = try {
+                                bigQueryService.isHealthy()
+                                "returned false (dataset not found?)"
+                            } catch (e: Exception) {
+                                e.message ?: "unknown error"
+                            }
+                            emitEvent("debug", "BigQuery: initialized but health check failed: $detail")
                         } else {
                             emitEvent("debug", "BigQuery: not configured (using mock schema for benchmark)")
                             val secretFileExists = java.io.File("/var/run/secrets/bigquery/bigquery-credentials").exists()
@@ -413,6 +428,7 @@ fun Application.configureRouting() {
                     } catch (e: Exception) {
                         emitEvent("error", e.message ?: "Unknown error")
                     } finally {
+                        heartbeatJob.cancel()
                         events.close()
                     }
                 }
