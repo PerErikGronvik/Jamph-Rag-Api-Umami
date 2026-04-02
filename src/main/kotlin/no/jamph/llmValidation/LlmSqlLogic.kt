@@ -120,6 +120,7 @@ fun LlmSqlLogic(
         debugLog("  SQL test ${index + 1}/${testCases.size}: ${testCase.question}")
         val raw = generateFn(buildLlmSqlPrompt(testCase.question, schema))
         val generatedSql = extractSqlFromResponse(raw)
+        debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
         val passed = isCorrect(generatedSql, testCase.rules)
         if (passed) correctCount++
         debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")

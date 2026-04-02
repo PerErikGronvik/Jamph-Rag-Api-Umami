@@ -45,9 +45,9 @@ class OllamaClient(
         }
         
         install(HttpTimeout) {
-            requestTimeoutMillis = 120_000
+            requestTimeoutMillis = 600_000
             connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 120_000
+            socketTimeoutMillis = 600_000
         }
         
         install(HttpRequestRetry) {
@@ -94,8 +94,8 @@ class OllamaClient(
             json.get("response")?.asString ?: body
             
         } catch (e: HttpRequestTimeoutException) {
-            logger.error("OLLAMA_TIMEOUT: Request timed out after 120s for model: {}", model, e)
-            throw IllegalStateException("Ollama timed out after 120s", e)
+            logger.error("OLLAMA_TIMEOUT: Request timed out after 600s for model: {}", model, e)
+            throw IllegalStateException("Ollama timed out after 600s", e)
         } catch (e: Exception) {
             logger.error("OLLAMA_ERROR: Failed to generate response", e)
             throw e

@@ -92,6 +92,7 @@ fun DialectValidetaLlmToSql(
             debugLog("  Dialect test ${index + 1}/${allQueries.size}: ${query.take(50)}...")
             val raw = generateFn(buildPrompt(query))
             val generatedSql = extractSqlFromResponse(raw)
+            debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
             val passed = isSqlQueryValid(generatedSql)
             if (passed) validCount++
             debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
