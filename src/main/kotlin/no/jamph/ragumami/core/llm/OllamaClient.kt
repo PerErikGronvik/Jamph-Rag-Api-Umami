@@ -95,10 +95,10 @@ class OllamaClient(
             
         } catch (e: HttpRequestTimeoutException) {
             logger.error("OLLAMA_TIMEOUT: Request timed out after 120s for model: {}", model, e)
-            return "Integrasjon til api rag virker, men ollama virker ikke (timeout)"
+            throw IllegalStateException("Ollama timed out after 120s", e)
         } catch (e: Exception) {
             logger.error("OLLAMA_ERROR: Failed to generate response", e)
-            return "Integrasjon til api rag virker, men ollama virker ikke"
+            throw e
         }
     }
 
