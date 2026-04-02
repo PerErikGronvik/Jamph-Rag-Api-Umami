@@ -1,6 +1,7 @@
 package no.jamph.llmValidation
 
 import no.jamph.bigquery.BigQuerySchemaServiceMock
+import no.jamph.bigquery.urlToSiteIdAndPath
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.ragumami.Routes
 import kotlinx.coroutines.runBlocking
@@ -28,13 +29,16 @@ fun LlmSqlLogic(
     },
     debugLog: (String) -> Unit = ::println
 ): Double = runBlocking {
-    val schema = BigQuerySchemaServiceMock().getSchemaContext()
+    val schemaService = BigQuerySchemaServiceMock()
+    val schema = schemaService.getSchemaContext()
+    val websites = schemaService.getWebsites()
 
     val testCases = listOf(
         TestCase(
             question = "Daglige sidevisninger i 2025",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains EVENT_TYPE") { sql -> sql.uppercase().contains("EVENT_TYPE") },
@@ -44,8 +48,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Topp 12 mest besøkte undersider i 2025",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains url_path") { sql -> sql.lowercase().contains("url_path") },
@@ -56,8 +61,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Sidevisninger per måned i 2025",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains EXTRACT(MONTH)/month") { sql -> sql.uppercase().contains("EXTRACT(MONTH") || sql.lowercase().contains("month") },
@@ -66,8 +72,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Trafikkilder i november 2025",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains month=11 or 'november'") { sql -> Regex("= ?11\\b|november", RegexOption.IGNORE_CASE).containsMatchIn(sql) },
@@ -77,8 +84,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Eksterne nettsider besøkende kommer fra",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains referrer_domain") { sql -> sql.lowercase().contains("referrer_domain") },
                 Rule("contains session_id") { sql -> sql.lowercase().contains("session_id") },
@@ -86,8 +94,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Lineær regresjon: trend i daglige sidevisninger",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains WITH (CTE)") { sql -> sql.uppercase().contains("WITH") },
@@ -96,8 +105,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Nøkkeltall: handlinger, navigering og frafall",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains session_id") { sql -> sql.lowercase().contains("session_id") },
@@ -106,8 +116,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Hvilket operativsystem bruker brukerne?",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains 'os'") { sql -> Regex("\\bos\\b", RegexOption.IGNORE_CASE).containsMatchIn(sql) },
@@ -116,8 +127,9 @@ fun LlmSqlLogic(
         ),
         TestCase(
             question = "Hvor navigerer brukere etter å ha søkt på siden?",
-            url = "aksel.nav.no",
+            url = "https://aksel.nav.no",
             rules = listOf(
+                Rule("contains fagtorsdag project") { sql -> sql.contains("fagtorsdag-prod-81a6.umami_student") },
                 Rule("contains website_id") { sql -> sql.contains(AKSEL_ID) },
                 Rule("contains '2025'") { sql -> sql.contains("2025") },
                 Rule("contains event_name") { sql -> sql.lowercase().contains("event_name") },
@@ -130,12 +142,23 @@ fun LlmSqlLogic(
     var correctCount = 0
     testCases.forEachIndexed { index, testCase ->
         debugLog("  SQL test ${index + 1}/${testCases.size}: ${testCase.question}")
-        val raw = generateFn(buildLlmSqlPrompt(testCase.question, testCase.url, schema))
+        
+        // Parse URL to get siteId and urlPath
+        val parsed = urlToSiteIdAndPath(testCase.url, websites)
+        debugLog("  Resolved: site_id=${parsed.siteId}, url_path=${parsed.urlPath}")
+        
+        val raw = generateFn(buildLlmSqlPrompt(testCase.question, parsed.siteId, parsed.urlPath, schema))
         val generatedSql = extractSqlFromResponse(raw)
         debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
+        
         var rulesPassed = 0
-        testCase.rules.forEach { rule ->
-            val ok = rule.check(generatedSql)
+        testCase.rules.forEachIndexed { ruleIndex, rule ->
+            // For the first rule (website_id check), inject the actual siteId
+            val ok = if (ruleIndex == 0 && rule.name == "contains website_id") {
+                generatedSql.contains(parsed.siteId)
+            } else {
+                rule.check(generatedSql)
+            }
             if (ok) rulesPassed++
             debugLog("    ${if (ok) "✓" else "✗"} ${rule.name}")
         }
@@ -147,16 +170,20 @@ fun LlmSqlLogic(
     correctCount.toDouble() / testCases.size
 }
 
-private fun buildLlmSqlPrompt(question: String, url: String, schemaContext: String): String = """
+private fun buildLlmSqlPrompt(question: String, siteId: String, urlPath: String, schemaContext: String): String = """
     You are a BigQuery SQL expert for Umami Analytics.
 
-    IMPORTANT INSTRUCTIONS:
-    - Generate ONLY valid BigQuery SQL, no explanations or markdown
-    - Use backticks (`) for table names
-    - Always use fully qualified table names as shown in schema
-    - The user is viewing the website: $url — use this domain to find the matching website_id from the Available Websites list
-    - Add WHERE website_id = '<matched-id>' when querying event or event_data tables
-    - Return only the SQL query, nothing else
+    CRITICAL REQUIREMENTS:
+    1. Output ONLY raw SQL - NO explanations, NO markdown, NO code blocks, NO comments
+    2. ALWAYS use fully qualified table names: `fagtorsdag-prod-81a6.umami_student.event` or `fagtorsdag-prod-81a6.umami_student.session`
+    3. NEVER use short table names like `event` or `session` - ALWAYS include `fagtorsdag-prod-81a6.umami_student.`
+    4. Use backticks (`) around table names
+    5. ALWAYS add WHERE website_id = '$siteId' when querying event or event_data tables
+    6. The user is viewing website_id: $siteId (url_path: $urlPath)
+    7. If filtering by page, use WHERE url_path = '$urlPath' or url_path LIKE '$urlPath%'
+
+    Example correct format:
+    SELECT COUNT(*) FROM `fagtorsdag-prod-81a6.umami_student.event` WHERE website_id = '$siteId'
 
     $schemaContext
 
