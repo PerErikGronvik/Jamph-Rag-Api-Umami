@@ -328,6 +328,15 @@ fun Application.configureRouting() {
                         }
                         if (bqOk) {
                             emitEvent("debug", "BigQuery: connected")
+                            // Print the real schema context
+                            emitEvent("debug", "--- BigQuery Schema ---")
+                            try {
+                                val schemaCtx = bigQueryService!!.getSchemaContext()
+                                schemaCtx.lines().forEach { line -> emitEvent("debug", line) }
+                            } catch (e: Exception) {
+                                emitEvent("debug", "  Failed to fetch schema: ${e.message}")
+                            }
+                            emitEvent("debug", "--- End Schema ---")
                         } else if (bigQueryService != null) {
                             val detail = bigQueryService.healthCheckDetail()
                             emitEvent("debug", "BigQuery: initialized but health check failed: $detail")
