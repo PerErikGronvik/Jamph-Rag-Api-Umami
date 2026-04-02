@@ -87,6 +87,10 @@ class OllamaClient(
             
             val body = response.bodyAsText()
             val json = JsonParser.parseString(body).asJsonObject
+            if (!response.status.isSuccess()) {
+                val errorMsg = json.get("error")?.asString ?: body
+                throw IllegalStateException("Ollama error (${response.status.value}): $errorMsg")
+            }
             json.get("response")?.asString ?: body
             
         } catch (e: HttpRequestTimeoutException) {
