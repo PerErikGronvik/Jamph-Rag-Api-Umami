@@ -20,21 +20,22 @@ private const val SPEED_PROBE = "Write a BigQuery SQL query that counts rows in 
 fun runBenchmark(
     models: List<String>,
     ollamaBaseUrl: String = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl,
-    llmSqlLogicFn: (String) -> Double = { model -> LlmSqlLogic(model) },
-    dialectValidateFn: (String) -> Double = { model -> DialectValidetaLlmToSql(model) }
+    llmSqlLogicFn: (String, (String) -> Unit) -> Double = { model, log -> LlmSqlLogic(model, debugLog = log) },
+    dialectValidateFn: (String, (String) -> Unit) -> Double = { model, log -> DialectValidetaLlmToSql(model, debugLog = log) },
+    debugLog: (String) -> Unit = ::println
 ): List<ModelBenchmarkResult> = models.map { model ->
-    println("▶ Benchmarking: $model")
+    debugLog("▶ Benchmarking: $model")
 
-    val sqlAccuracy = llmSqlLogicFn(model)
-    println("  SQL accuracy:     ${"%.0f".format(sqlAccuracy * 100)}%")
+    val sqlAccuracy = llmSqlLogicFn(model, debugLog)
+    debugLog("  SQL accuracy:     ${"%.0f".format(sqlAccuracy * 100)}%")
 
-    val dialectAccuracy = dialectValidateFn(model)
-    println("  Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
+    val dialectAccuracy = dialectValidateFn(model, debugLog)
+    debugLog("  Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
 
     val speedResult = runBlocking {
         TokenSpeedMeasurer(ollamaBaseUrl, model).measure(SPEED_PROBE)
     }
-    println("  Tokens/sec:       ${"%.1f".format(speedResult.tokensPerSecond)}")
+    debugLog("  Tokens/sec:       ${"%.1f".format(speedResult.tokensPerSecond)}")
 
     ModelBenchmarkResult(
         model           = model,

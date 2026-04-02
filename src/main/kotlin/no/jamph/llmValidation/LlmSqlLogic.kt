@@ -22,7 +22,8 @@ fun LlmSqlLogic(
             baseUrl = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl,
             model = modelName
         ).generate(prompt)
-    }
+    },
+    debugLog: (String) -> Unit = ::println
 ): Double = runBlocking {
     val schema = BigQuerySchemaServiceMock().getSchemaContext()
 
@@ -114,10 +115,14 @@ fun LlmSqlLogic(
         ),
     )
 
-    val correctCount = testCases.count { testCase ->
+    var correctCount = 0
+    testCases.forEachIndexed { index, testCase ->
+        debugLog("  SQL test ${index + 1}/${testCases.size}: ${testCase.question}")
         val raw = generateFn(buildLlmSqlPrompt(testCase.question, schema))
         val generatedSql = extractSqlFromResponse(raw)
-        isCorrect(generatedSql, testCase.rules)
+        val passed = isCorrect(generatedSql, testCase.rules)
+        if (passed) correctCount++
+        debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
     }
 
     correctCount.toDouble() / testCases.size

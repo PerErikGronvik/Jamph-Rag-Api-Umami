@@ -10,7 +10,8 @@ fun DialectValidetaLlmToSql(
     modellName: String,
     generateFn: suspend (String) -> String = { prompt ->
         OllamaClient(baseUrl = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl, model = modellName).generate(prompt)
-    }
+    },
+    debugLog: (String) -> Unit = ::println
 ): Double {
     return runBlocking {
         val schemaContext = BigQuerySchemaServiceMock().getSchemaContext()
@@ -87,10 +88,13 @@ fun DialectValidetaLlmToSql(
 
         val allQueries = llmQueriesSidevisninger2025 + llmQueriesMestBesokteUndersider2025
         var validCount = 0
-        for (query in allQueries) {
+        allQueries.forEachIndexed { index, query ->
+            debugLog("  Dialect test ${index + 1}/${allQueries.size}: ${query.take(50)}...")
             val raw = generateFn(buildPrompt(query))
             val generatedSql = extractSqlFromResponse(raw)
-            if (isSqlQueryValid(generatedSql)) validCount++
+            val passed = isSqlQueryValid(generatedSql)
+            if (passed) validCount++
+            debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
         }
 
         validCount.toDouble() / allQueries.size

@@ -11,16 +11,30 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.http.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import org.slf4j.event.Level
 import org.slf4j.LoggerFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.bigquery.BigQueryQueryService
 import no.jamph.bigquery.BigQuerySchemaService
 import no.jamph.ragumami.umami.domain.UmamiRAGService
 import no.jamph.llmValidation.runBenchmark
+import no.jamph.llmValidation.ModelBenchmarkResult
+import no.jamph.llmValidation.LlmSqlLogic
+import no.jamph.llmValidation.DialectValidetaLlmToSql
+import no.jamph.llmValidation.TokenSpeedMeasurer
+import java.time.Instant
 
 private val log = LoggerFactory.getLogger("Application")
 
@@ -243,6 +257,146 @@ fun Application.configureRouting() {
                     HttpStatusCode.InternalServerError,
                     ErrorResponse(e.message ?: "Benchmark failed")
                 )
+            }
+        }
+        
+        post("/api/benchmark/stream") {
+            val request = call.receive<BenchmarkRequest>()
+            val model = request.model ?: ollamaModel
+            val benchmarkOllamaUrl = request.ollamaBaseUrl ?: ollamaBaseUrl
+            val gson = Gson()
+            val events = Channel<String>(Channel.UNLIMITED)
+            
+            fun emitEvent(type: String, message: String) {
+                events.trySend("data: ${gson.toJson(mapOf("type" to type, "message" to message))}\n\n")
+            }
+            
+            fun emitResult(result: ModelBenchmarkResult) {
+                val map = mapOf(
+                    "type" to "result",
+                    "result" to mapOf(
+                        "model" to result.model,
+                        "timestamp" to result.timestamp,
+                        "sqlAccuracy" to result.sqlAccuracy,
+                        "dialectAccuracy" to result.dialectAccuracy,
+                        "tokensPerSecond" to result.tokensPerSecond,
+                        "promptTokens" to result.promptTokens,
+                        "responseTokens" to result.responseTokens,
+                        "evalDurationMs" to result.evalDurationMs
+                    )
+                )
+                events.trySend("data: ${gson.toJson(map)}\n\n")
+            }
+            
+            coroutineScope {
+                launch(Dispatchers.IO) {
+                    try {
+                        // Step 1: Test BigQuery connection
+                        emitEvent("debug", "Testing BigQuery connection...")
+                        val bqOk = try {
+                            bigQueryService?.isHealthy() ?: false
+                        } catch (e: Exception) { false }
+                        if (bqOk) {
+                            emitEvent("debug", "BigQuery: connected")
+                        } else {
+                            emitEvent("debug", "BigQuery: not configured (using mock schema for benchmark)")
+                        }
+                        
+                        // Step 2: Test Ollama connection
+                        emitEvent("debug", "Testing Ollama connection at $benchmarkOllamaUrl ...")
+                        val ollamaTagsBody: String
+                        try {
+                            val client = HttpClient(CIO)
+                            val resp = client.get("$benchmarkOllamaUrl/api/tags")
+                            ollamaTagsBody = resp.bodyAsText()
+                            client.close()
+                        } catch (e: Exception) {
+                            emitEvent("debug", "Ollama connection failed: ${e.message}")
+                            emitEvent("error", "Cannot connect to Ollama at $benchmarkOllamaUrl")
+                            return@launch
+                        }
+                        emitEvent("debug", "Ollama: connected")
+                        
+                        // Step 3: Check if model is available
+                        emitEvent("debug", "Checking if model '$model' is available...")
+                        val availableModels = try {
+                            val json = JsonParser.parseString(ollamaTagsBody).asJsonObject
+                            json.getAsJsonArray("models")?.map {
+                                it.asJsonObject.get("name").asString
+                            } ?: emptyList()
+                        } catch (e: Exception) { emptyList() }
+                        
+                        val modelFound = availableModels.any { it == model || it.startsWith("$model:") || it.split(":")[0] == model.split(":")[0] }
+                        if (modelFound) {
+                            emitEvent("debug", "Model '$model' is available")
+                        } else {
+                            emitEvent("debug", "Model '$model' NOT found")
+                            emitEvent("debug", "Available models: ${availableModels.joinToString(", ")}")
+                            emitEvent("error", "Model '$model' not available. Install with: ollama pull $model")
+                            return@launch
+                        }
+                        
+                        // Step 4: SQL accuracy test
+                        emitEvent("debug", "--- Starting SQL accuracy test ---")
+                        val sqlAccuracy = try {
+                            LlmSqlLogic(model) { msg -> emitEvent("debug", msg) }
+                        } catch (e: Exception) {
+                            emitEvent("debug", "SQL accuracy test failed: ${e.message}")
+                            0.0
+                        }
+                        emitEvent("debug", "SQL accuracy: ${"%.0f".format(sqlAccuracy * 100)}%")
+                        
+                        // Step 5: Dialect accuracy test
+                        emitEvent("debug", "--- Starting dialect accuracy test ---")
+                        val dialectAccuracy = try {
+                            DialectValidetaLlmToSql(model) { msg -> emitEvent("debug", msg) }
+                        } catch (e: Exception) {
+                            emitEvent("debug", "Dialect accuracy test failed: ${e.message}")
+                            0.0
+                        }
+                        emitEvent("debug", "Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
+                        
+                        // Step 6: Token speed test
+                        emitEvent("debug", "--- Measuring token speed ---")
+                        val speedResult = try {
+                            TokenSpeedMeasurer(benchmarkOllamaUrl, model)
+                                .measure("Write a BigQuery SQL query that counts rows in a table.")
+                        } catch (e: Exception) {
+                            emitEvent("debug", "Speed test failed: ${e.message}")
+                            no.jamph.llmValidation.TokenSpeedResult(model, 0, 0, 0L, 0.0)
+                        }
+                        emitEvent("debug", "Token speed: ${"%.1f".format(speedResult.tokensPerSecond)} tokens/sec")
+                        
+                        // Assemble result
+                        val result = ModelBenchmarkResult(
+                            model = model,
+                            timestamp = Instant.now().toString(),
+                            sqlAccuracy = sqlAccuracy,
+                            dialectAccuracy = dialectAccuracy,
+                            tokensPerSecond = speedResult.tokensPerSecond,
+                            promptTokens = speedResult.promptTokens,
+                            responseTokens = speedResult.responseTokens,
+                            evalDurationMs = speedResult.evalDurationMs
+                        )
+                        emitResult(result)
+                        
+                        // Step 7: External save (placeholder)
+                        emitEvent("debug", "External save: not yet implemented")
+                        emitEvent("done", "Benchmark complete")
+                        
+                    } catch (e: Exception) {
+                        emitEvent("error", e.message ?: "Unknown error")
+                    } finally {
+                        events.close()
+                    }
+                }
+                
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    for (event in events) {
+                        write(event)
+                        flush()
+                    }
+                }
             }
         }
     }
