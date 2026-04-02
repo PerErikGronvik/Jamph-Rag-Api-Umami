@@ -291,23 +291,6 @@ fun Application.configureRouting() {
                 events.trySend("data: ${gson.toJson(mapOf("type" to type, "message" to message))}\n\n")
             }
             
-            fun emitResult(result: ModelBenchmarkResult) {
-                val map = mapOf(
-                    "type" to "result",
-                    "result" to mapOf(
-                        "model" to result.model,
-                        "timestamp" to result.timestamp,
-                        "sqlAccuracy" to result.sqlAccuracy,
-                        "dialectAccuracy" to result.dialectAccuracy,
-                        "tokensPerSecond" to result.tokensPerSecond,
-                        "promptTokens" to result.promptTokens,
-                        "responseTokens" to result.responseTokens,
-                        "evalDurationMs" to result.evalDurationMs
-                    )
-                )
-                events.trySend("data: ${gson.toJson(map)}\n\n")
-            }
-            
             coroutineScope {
                 launch(Dispatchers.IO) {
                     try {
@@ -387,18 +370,18 @@ fun Application.configureRouting() {
                         }
                         emitEvent("debug", "Token speed: ${"%.1f".format(speedResult.tokensPerSecond)} tokens/sec")
                         
-                        // Assemble result
-                        val result = ModelBenchmarkResult(
-                            model = model,
-                            timestamp = Instant.now().toString(),
-                            sqlAccuracy = sqlAccuracy,
-                            dialectAccuracy = dialectAccuracy,
-                            tokensPerSecond = speedResult.tokensPerSecond,
-                            promptTokens = speedResult.promptTokens,
-                            responseTokens = speedResult.responseTokens,
-                            evalDurationMs = speedResult.evalDurationMs
-                        )
-                        emitResult(result)
+                        // Assemble and print results
+                        emitEvent("debug", "")
+                        emitEvent("debug", "========== RESULTS ==========")
+                        emitEvent("debug", "Model:              $model")
+                        emitEvent("debug", "Timestamp:          ${Instant.now()}")
+                        emitEvent("debug", "SQL accuracy:       ${"%.0f".format(sqlAccuracy * 100)}%")
+                        emitEvent("debug", "Dialect accuracy:   ${"%.0f".format(dialectAccuracy * 100)}%")
+                        emitEvent("debug", "Tokens/sec:         ${"%.1f".format(speedResult.tokensPerSecond)}")
+                        emitEvent("debug", "Prompt tokens:      ${speedResult.promptTokens}")
+                        emitEvent("debug", "Response tokens:    ${speedResult.responseTokens}")
+                        emitEvent("debug", "Eval duration:      ${speedResult.evalDurationMs} ms")
+                        emitEvent("debug", "=============================")
                         
                         // Step 7: External save (placeholder)
                         emitEvent("debug", "External save: not yet implemented")
