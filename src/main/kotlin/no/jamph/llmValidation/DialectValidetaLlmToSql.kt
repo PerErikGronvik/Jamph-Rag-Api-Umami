@@ -1,9 +1,13 @@
 package no.jamph.llmValidation
 
 import no.jamph.bigquery.BigQuerySchemaServiceMock
+import no.jamph.bigquery.urlToSiteIdAndPath
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.ragumami.Routes
+import no.jamph.ragumami.umami.SqlPrompt
 import kotlinx.coroutines.runBlocking
+
+private const val AKSEL_Website_Id = "fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1"
 
 // Function to validate LLM-to-SQL across dialect variations
 fun DialectValidetaLlmToSql(
@@ -14,25 +18,27 @@ fun DialectValidetaLlmToSql(
     debugLog: (String) -> Unit = ::println
 ): Double {
     return runBlocking {
-        val schemaContext = BigQuerySchemaServiceMock().getSchemaContext()
+        val schemaService = BigQuerySchemaServiceMock()
+        val schemaContext = schemaService.getSchemaContext()
+        val websites = schemaService.getWebsites()
 
         val llmQueriesSidevisninger2025 = listOf(
-            "Kor mange brukarar har besøkt sida aksel i 2025?",
-            "How many users visited the site on aksel 2025?",
-            "Hvor mange brukere har besøkt siden aksel i 2025?",
-            "Hvor mange users har visited siden aksel i 2025?",
-            "ke mange brukere he besøkt sida aksel 2025?",
-            "hvor mange folk har vært på aksel i 2025?",
-            "kor mange folk har gått innom aksel i hele 2025?",
+            "Kor mange brukarar har besøkt sida i 2025?",
+            "How many users visited the site in 2025?",
+            "Hvor mange brukere har besøkt siden i 2025?",
+            "Hvor mange users har visited siden i 2025?",
+            "ke mange brukere he besøkt sida 2025?",
+            "hvor mange folk har vært på i 2025?",
+            "kor mange folk har gått innom i heile 2025?",
         )
 
         val llmQueriesMestBesokteUndersider2025 = listOf(
-            "Hvilke er de mest besøkte undersidene på aksel i 2025?",
-            "What are the most visited subpages on aksel in 2025?",
-            "Hvor dro brukere på Aksel etter denne siden i 2025?",
-            "hvor dro folk på Aksel etter denne siden i 2025?",
-            "hvor dro folk på Aksel etter denne siden i hele 2025?",
-            "Kva gjorde brukarane på Aksel etter denne sida i 2025?",
+            "Hvilke er de mest besøkte undersidene i 2025?",
+            "What are the most visited subpages in 2025?",
+            "Hvor dro brukere etter denne siden i 2025?",
+            "hvor dro folk etter denne siden i 2025?",
+            "hvor dro folk etter denne siden i hele 2025?",
+            "Kva gjorde brukarane etter denne sida i 2025?",
             "Kva gjorde folk etter på å vært Aksel i 2025?",
         )
 
@@ -68,32 +74,30 @@ fun DialectValidetaLlmToSql(
             ]
         """.trimIndent()
 
-        fun buildPrompt(query: String): String = """
-            You are a BigQuery SQL expert for Umami Analytics.
-
-            IMPORTANT INSTRUCTIONS:
-            - Generate ONLY valid BigQuery SQL, no explanations or markdown
-            - Use backticks (`) for table names
-            - Always use fully qualified table names as shown in schema
-            - When user mentions a website (like "Aksel"), find the matching website_id from the Available Websites list
-            - Add WHERE website_id = '<matched-id>' when querying event or event_data tables
-            - Return only the SQL query, nothing else
-
-            $schemaContext
-
-            User Query: $query
-
-            Generate the BigQuery SQL query:
-        """.trimIndent()
+        // Parse URL to get siteId and urlPath (same as LlmSqlLogic)
+        val url = "https://aksel.nav.no"
+        val parsed = urlToSiteIdAndPath(url, websites)
+        
+        // Basic validation rules (lighter than LlmSqlLogic for dialect testing)
+        fun validateSql(sql: String): Boolean {
+            if (!isSqlQueryValid(sql)) return false
+            if (!sql.contains("fagtorsdag-prod-81a6.umami_student")) return false
+            if (!sql.contains(parsed.siteId)) return false
+            return true
+        }
 
         val allQueries = llmQueriesSidevisninger2025 + llmQueriesMestBesokteUndersider2025
         var validCount = 0
         allQueries.forEachIndexed { index, query ->
             debugLog("  Dialect test ${index + 1}/${allQueries.size}: ${query.take(50)}...")
-            val raw = generateFn(buildPrompt(query))
+            
+            // Use universal SqlPrompt with resolved siteId and urlPath
+            val prompt = SqlPrompt.buildPrompt(query, parsed.siteId, parsed.urlPath, schemaContext)
+            val raw = generateFn(prompt)
             val generatedSql = extractSqlFromResponse(raw)
+            
             debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
-            val passed = isSqlQueryValid(generatedSql)
+            val passed = validateSql(generatedSql)
             if (passed) validCount++
             debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
         }
