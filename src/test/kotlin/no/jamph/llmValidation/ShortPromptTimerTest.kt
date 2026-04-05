@@ -19,6 +19,9 @@ class ShortPromptTimerTest {
     private lateinit var wireMock: WireMockServer
     private lateinit var measurer: ShortPromptTimer
 
+    private val testUrl = "https://test.example.com"
+    private val testWebsites = emptyList<no.jamph.bigquery.Website>()
+
     @BeforeEach
     fun setup() {
         wireMock = WireMockServer(WireMockConfiguration.options().dynamicPort())
@@ -44,7 +47,7 @@ class ShortPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureTime("How many page views last week?")
+        val result = measurer.measureTime("How many page views last week?", testUrl, testWebsites)
 
         assertEquals("How many page views last week?", result.query)
     }
@@ -60,7 +63,7 @@ class ShortPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureTime("Count all events")
+        val result = measurer.measureTime("Count all events", testUrl, testWebsites)
 
         assertTrue(result.sql.contains("SELECT"), "SQL should contain SELECT from Ollama")
     }
@@ -76,7 +79,7 @@ class ShortPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureTime("Simple query")
+        val result = measurer.measureTime("Simple query", testUrl, testWebsites)
 
         assertTrue(result.durationMs >= 0, "Duration should be non-negative")
     }
@@ -107,7 +110,7 @@ class ShortPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureTime("Some prompt")
+        val result = measurer.measureTime("Some prompt", testUrl, testWebsites)
 
         assertEquals("Some prompt", result.query)
         assertTrue(result.durationMs >= 0)

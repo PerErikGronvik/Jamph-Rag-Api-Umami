@@ -21,6 +21,8 @@ class LongPromptTimerTest {
 
     private val longPrompt = "a".repeat(LONG_CONTEXT_THRESHOLD + 1)
     private val longResponse = "b".repeat(LONG_CONTEXT_THRESHOLD + 1)
+    private val testUrl = "https://test.example.com"
+    private val testWebsites = emptyList<no.jamph.bigquery.Website>()
 
     @BeforeEach
     fun setup() {
@@ -47,7 +49,7 @@ class LongPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureLongContext(longPrompt)
+        val result = measurer.measureLongContext(longPrompt, testUrl, testWebsites)
 
         assertEquals(longPrompt, result.query)
     }
@@ -63,7 +65,7 @@ class LongPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureLongContext(longPrompt)
+        val result = measurer.measureLongContext(longPrompt, testUrl, testWebsites)
 
         assertTrue(result.queryLength > LONG_CONTEXT_THRESHOLD)
         assertTrue(result.sqlLength > 0)
@@ -80,7 +82,7 @@ class LongPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureLongContext(longPrompt)
+        val result = measurer.measureLongContext(longPrompt, testUrl, testWebsites)
 
         assertTrue(result.exceedsThreshold, "Expected sql to exceed threshold of $LONG_CONTEXT_THRESHOLD chars")
     }
@@ -97,7 +99,7 @@ class LongPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureLongContext(longPrompt)
+        val result = measurer.measureLongContext(longPrompt, testUrl, testWebsites)
 
         assertFalse(result.exceedsThreshold, "Expected sql to be under threshold of $LONG_CONTEXT_THRESHOLD chars")
     }
@@ -113,7 +115,7 @@ class LongPromptTimerTest {
                 )
         )
 
-        val result = measurer.measureLongContext(longPrompt)
+        val result = measurer.measureLongContext(longPrompt, testUrl, testWebsites)
 
         assertTrue(result.durationMs >= 0)
     }
