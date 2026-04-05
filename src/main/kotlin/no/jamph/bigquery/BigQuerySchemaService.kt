@@ -32,7 +32,7 @@ class BigQuerySchemaService(
      *
      * Uses BigQueryQueryService to execute SQL (so auth/client setup lives in one place).
      */
-    fun getWebsites(): List<Website> {
+    override fun getWebsites(): List<Website> {
         val query = """
             SELECT 
                 website_id,
@@ -100,7 +100,7 @@ class BigQuerySchemaService(
     /**
      * Generates a comprehensive schema context for LLM prompts.
      */
-    fun getSchemaContext(): String {
+    override fun getSchemaContext(): String {
         val tables = listTables()
 
         val schemaBuilder = StringBuilder()

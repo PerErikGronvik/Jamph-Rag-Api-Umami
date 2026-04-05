@@ -2,7 +2,7 @@ package no.jamph.bigquery
 
 class BigQuerySchemaServiceMock : BigQuerySchemaProvider {
 
-    fun getWebsites(): List<Website> = listOf(
+    override fun getWebsites(): List<Website> = listOf(
         Website("fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1", "Aksel", "aksel.nav.no"),
         Website("aa000001-0000-0000-0000-000000000001", "NAV", "nav.no"),
         Website("aa000002-0000-0000-0000-000000000002", "Skatteetaten", "skatteetaten.no"),
@@ -37,7 +37,7 @@ class BigQuerySchemaServiceMock : BigQuerySchemaProvider {
         Website("aa000031-0000-0000-0000-000000000031", "Sivilforsvaret", "sivilforsvaret.no"),
     )
 
-    fun getSchemaContext(): String = """
+    override fun getSchemaContext(): String = """
 === BIGQUERY DATABASE SCHEMA ===
 Project: fagtorsdag-prod-81a6
 Dataset: umami_student
