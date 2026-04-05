@@ -38,11 +38,14 @@ fun DialectValidetaLlmToSql(
         val llmQueriesMestBesokteUndersider2025 = listOf(
             "Hvilke er de mest besøkte undersidene i 2025?",
             "What are the most visited subpages in 2025?",
+        )
+
+        val llmQueriesNavigasjonEtterSiden2025 = listOf(
             "Hvor dro brukere etter denne siden i 2025?",
             "hvor dro folk etter denne siden i 2025?",
             "hvor dro folk etter denne siden i hele 2025?",
-            "Kva gjorde brukarane etter denne sida i 2025?",
-            "Kva gjorde folk etter på å vært sida i 2025?",
+            "Kvahen dro brukarane etter denne sida i 2025?",
+            "Kvahen dro folk etter på å vært sida i 2025?",
         )
 
         val sqlAnswerSidevisninger2025 = """
@@ -79,24 +82,40 @@ fun DialectValidetaLlmToSql(
 
         val url = "https://aksel.nav.no"
         
-        fun validateSql(sql: String): Boolean {
+        fun validateBase(sql: String): Boolean {
             if (!isSqlQueryValid(sql)) return false
             if (!sql.contains("fagtorsdag-prod-81a6.umami_student")) return false
             if (!sql.contains(AKSEL_Website_Id)) return false
             return true
         }
 
-        val allQueries = llmQueriesSidevisninger2025 + llmQueriesMestBesokteUndersider2025
+        fun validateNavigation(sql: String): Boolean {
+            if (!validateBase(sql)) return false
+            if (!sql.lowercase().contains("url_path") && !sql.lowercase().contains("referrer_domain")) return false
+            return true
+        }
+
+        data class QueryGroup(val queries: List<String>, val validate: (String) -> Boolean)
+
+        val groups = listOf(
+            QueryGroup(llmQueriesSidevisninger2025, ::validateBase),
+            QueryGroup(llmQueriesMestBesokteUndersider2025, ::validateBase),
+            QueryGroup(llmQueriesNavigasjonEtterSiden2025, ::validateNavigation),
+        )
+
+        val allQueries = groups.flatMap { it.queries }
         var validCount = 0
-        allQueries.forEachIndexed { index, query ->
-            debugLog("  Dialect test ${index + 1}/${allQueries.size}: ${query.take(50)}...")
-            
-            val generatedSql = ragService.generateSQL(query, url, websites)
-            
-            debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
-            val passed = validateSql(generatedSql)
-            if (passed) validCount++
-            debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
+        var globalIndex = 0
+        groups.forEach { group ->
+            group.queries.forEach { query ->
+                globalIndex++
+                debugLog("  Dialect test $globalIndex/${allQueries.size}: ${query.take(50)}...")
+                val generatedSql = ragService.generateSQL(query, url, websites)
+                debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
+                val passed = group.validate(generatedSql)
+                if (passed) validCount++
+                debugLog("  → ${if (passed) "PASS ✓" else "FAIL ✗"}")
+            }
         }
 
         validCount.toDouble() / allQueries.size
