@@ -1,15 +1,13 @@
 package no.jamph.llmValidation
 
 import no.jamph.bigquery.BigQuerySchemaServiceMock
-import no.jamph.bigquery.urlToSiteIdAndPath
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.ragumami.Routes
-import no.jamph.ragumami.umami.SqlPrompt
+import no.jamph.ragumami.umami.UmamiRAGService
 import kotlinx.coroutines.runBlocking
 
 private const val AKSEL_Website_Id = "fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1"
 
-// Function to validate LLM-to-SQL across dialect variations
 fun DialectValidetaLlmToSql(
     modellName: String,
     generateFn: suspend (String) -> String = { prompt ->
@@ -19,8 +17,13 @@ fun DialectValidetaLlmToSql(
 ): Double {
     return runBlocking {
         val schemaService = BigQuerySchemaServiceMock()
-        val schemaContext = schemaService.getSchemaContext()
         val websites = schemaService.getWebsites()
+        
+        val ollamaClient = OllamaClient(
+            baseUrl = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl,
+            model = modellName
+        )
+        val ragService = UmamiRAGService(ollamaClient, schemaService)
 
         val llmQueriesSidevisninger2025 = listOf(
             "Kor mange brukarar har besøkt sida i 2025?",
@@ -74,15 +77,12 @@ fun DialectValidetaLlmToSql(
             ]
         """.trimIndent()
 
-        // Parse URL to get siteId and urlPath (same as LlmSqlLogic)
         val url = "https://aksel.nav.no"
-        val parsed = urlToSiteIdAndPath(url, websites)
         
-        // Basic validation rules (lighter than LlmSqlLogic for dialect testing)
         fun validateSql(sql: String): Boolean {
             if (!isSqlQueryValid(sql)) return false
             if (!sql.contains("fagtorsdag-prod-81a6.umami_student")) return false
-            if (!sql.contains(parsed.siteId)) return false
+            if (!sql.contains(AKSEL_Website_Id)) return false
             return true
         }
 
@@ -91,10 +91,7 @@ fun DialectValidetaLlmToSql(
         allQueries.forEachIndexed { index, query ->
             debugLog("  Dialect test ${index + 1}/${allQueries.size}: ${query.take(50)}...")
             
-            // Use universal SqlPrompt with resolved siteId and urlPath
-            val prompt = SqlPrompt.buildPrompt(query, parsed.siteId, parsed.urlPath, schemaContext)
-            val raw = generateFn(prompt)
-            val generatedSql = extractSqlFromResponse(raw)
+            val generatedSql = ragService.generateSQL(query, url, websites)
             
             debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
             val passed = validateSql(generatedSql)

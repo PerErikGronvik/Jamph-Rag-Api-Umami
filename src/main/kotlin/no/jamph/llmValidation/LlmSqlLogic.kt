@@ -1,10 +1,9 @@
 package no.jamph.llmValidation
 
 import no.jamph.bigquery.BigQuerySchemaServiceMock
-import no.jamph.bigquery.urlToSiteIdAndPath
 import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.ragumami.Routes
-import no.jamph.ragumami.umami.SqlPrompt
+import no.jamph.ragumami.umami.UmamiRAGService
 import kotlinx.coroutines.runBlocking
 
 private const val AKSEL_ID = "fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1"
@@ -31,8 +30,13 @@ fun LlmSqlLogic(
     debugLog: (String) -> Unit = ::println
 ): Double = runBlocking {
     val schemaService = BigQuerySchemaServiceMock()
-    val schema = schemaService.getSchemaContext()
     val websites = schemaService.getWebsites()
+    
+    val ollamaClient = OllamaClient(
+        baseUrl = System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl,
+        model = modelName
+    )
+    val ragService = UmamiRAGService(ollamaClient, schemaService)
 
     val testCases = listOf(
         TestCase(
@@ -145,23 +149,14 @@ fun LlmSqlLogic(
     var correctCount = 0
     testCases.forEachIndexed { index, testCase ->
         debugLog("  SQL test ${index + 1}/${testCases.size}: ${testCase.question}")
+        debugLog("  URL: ${testCase.url}")
         
-        // Parse URL to get siteId and urlPath
-        val parsed = urlToSiteIdAndPath(testCase.url, websites)
-        debugLog("  Resolved: site_id=${parsed.siteId}, url_path=${parsed.urlPath}")
-        
-        val raw = generateFn(SqlPrompt.buildPrompt(testCase.question, parsed.siteId, parsed.urlPath, schema))
-        val generatedSql = extractSqlFromResponse(raw)
+        val generatedSql = ragService.generateSQL(testCase.question, testCase.url, websites)
         debugLog("  Generated SQL: ${generatedSql.replace("\n", " ")}")
         
         var rulesPassed = 0
-        testCase.rules.forEachIndexed { ruleIndex, rule ->
-            // For the first rule (website_id check), inject the actual siteId
-            val ok = if (ruleIndex == 0 && rule.name == "contains website_id") {
-                generatedSql.contains(parsed.siteId)
-            } else {
-                rule.check(generatedSql)
-            }
+        testCase.rules.forEach { rule ->
+            val ok = rule.check(generatedSql)
             if (ok) rulesPassed++
             debugLog("    ${if (ok) "✓" else "✗"} ${rule.name}")
         }
@@ -172,5 +167,3 @@ fun LlmSqlLogic(
 
     correctCount.toDouble() / testCases.size
 }
-
-// Now using universal SqlPrompt.buildPrompt() - see SqlPrompt.kt

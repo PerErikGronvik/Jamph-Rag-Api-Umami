@@ -102,6 +102,43 @@ class OllamaClient(
         }
     }
 
+    suspend fun generateConstrained(prompt: String, temperature: Double = 0.0, maxTokens: Int = 10): String {
+        return try {
+            val startTime = System.currentTimeMillis()
+            
+            val response = client.post("$baseUrl/api/generate") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "model" to model,
+                    "prompt" to prompt,
+                    "stream" to false,
+                    "options" to mapOf(
+                        "temperature" to temperature,
+                        "num_predict" to maxTokens
+                    )
+                ))
+            }
+            
+            val duration = System.currentTimeMillis() - startTime
+            logger.info("OLLAMA_SUCCESS: Constrained generate completed in {}ms", duration)
+            
+            val body = response.bodyAsText()
+            val json = JsonParser.parseString(body).asJsonObject
+            if (!response.status.isSuccess()) {
+                val errorMsg = json.get("error")?.asString ?: body
+                throw IllegalStateException("Ollama error (${response.status.value}): $errorMsg")
+            }
+            json.get("response")?.asString ?: body
+            
+        } catch (e: HttpRequestTimeoutException) {
+            logger.error("OLLAMA_TIMEOUT: Constrained request timed out", e)
+            throw IllegalStateException("Ollama timed out", e)
+        } catch (e: Exception) {
+            logger.error("OLLAMA_ERROR: Failed to generate constrained response", e)
+            throw e
+        }
+    }
+
     suspend fun generateRaw(prompt: String): String {
         return try {
             val response = client.post("$baseUrl/api/generate") {

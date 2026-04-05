@@ -231,44 +231,46 @@ fun Application.configureRouting() {
         }
         
         post("/api/chat") {
-            try {
-                val request = call.receive<ChatRequest>()
-                // Use model from request if provided, otherwise use default
-                val clientToUse = if (request.model != null && request.model != ollamaModel) {
-                    OllamaClient(ollamaBaseUrl, request.model)
-                } else {
-                    ollamaClient
-                }
-                val serviceToUse = if (clientToUse !== ollamaClient) {
-                    UmamiRAGService(clientToUse, bigQueryService)
-                } else {
-                    ragService
-                }
-                val response = serviceToUse.chat(request.message)
-                call.respond(ChatResponse(response))
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Unknown error")
-                )
-            }
+            call.respond(
+                HttpStatusCode.NotImplemented,
+                ErrorResponse("Chat endpoint removed. Use /api/sql instead.")
+            )
         }
         
         post("/api/sql") {
             try {
                 val request = call.receive<SQLRequest>()
-                // Use model from request if provided, otherwise use default
+                
+                if (bigQueryService == null) {
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        ErrorResponse("BigQuery is not configured.")
+                    )
+                    return@post
+                }
+                
+                if (request.url == null) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("URL is required")
+                    )
+                    return@post
+                }
+                
                 val clientToUse = if (request.model != null && request.model != ollamaModel) {
                     OllamaClient(ollamaBaseUrl, request.model)
                 } else {
                     ollamaClient
                 }
+                
                 val serviceToUse = if (clientToUse !== ollamaClient) {
                     UmamiRAGService(clientToUse, bigQueryService)
                 } else {
                     ragService
                 }
-                val sql = serviceToUse.generateSQL(request.query, request.url)
+                
+                val websites = bigQueryService.getWebsites()
+                val sql = serviceToUse.generateSQL(request.query, request.url, websites)
                 call.respond(SQLResponse(sql))
             } catch (e: Exception) {
                 call.respond(
@@ -449,7 +451,7 @@ fun Application.configureRouting() {
 
 data class ChatRequest(val message: String, val model: String? = null)
 data class ChatResponse(val response: String)
-data class SQLRequest(val query: String, val model: String? = null, val url: String? = null)
+data class SQLRequest(val query: String, val url: String? = null, val model: String? = null)
 data class SQLResponse(val sql: String)
 data class BenchmarkRequest(val model: String? = null, val ollamaBaseUrl: String? = null)
 data class ErrorResponse(val error: String)
