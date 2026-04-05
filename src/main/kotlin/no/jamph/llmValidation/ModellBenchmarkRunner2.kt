@@ -28,6 +28,20 @@ fun runBenchmark(
     llmSqlLogicFn: (String, (String) -> Unit) -> Double = { model, log -> LlmSqlLogic(model, debugLog = log) },
     dialectValidateFn: (String, (String) -> Unit) -> Double = { model, log -> DialectValidetaLlmToSql(model, debugLog = log) },
     costValidateFn: (String, (String) -> Unit) -> Double = { model, log -> CostValidateLLmEstimator(model, debugLog = log) },
+    endToEndTimerFn: (String, String) -> Long = { url, model ->
+        val client = no.jamph.ragumami.core.llm.OllamaClient(System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl, model)
+        val schema = no.jamph.bigquery.BigQuerySchemaServiceMock()
+        val rag = no.jamph.ragumami.umami.UmamiRAGService(client, schema)
+        kotlinx.coroutines.runBlocking { EndToEndTimer(rag).measureFullPipeline(TIMER_PROBE, url, schema.getWebsites()).durationMs }
+    },
+    longPromptTimerFn: (String) -> Long = { model ->
+        val client = no.jamph.ragumami.core.llm.OllamaClient(System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl, model)
+        kotlinx.coroutines.runBlocking { LongPromptTimer(client).measureLlmWithLargeSchema(TIMER_PROBE).averageDurationMs }
+    },
+    shortPromptTimerFn: (String) -> Long = { model ->
+        val client = no.jamph.ragumami.core.llm.OllamaClient(System.getenv("OLLAMA_BASE_URL") ?: Routes.ollamaUrl, model)
+        kotlinx.coroutines.runBlocking { ShortPromptTimer(client).measureLlmWithSmallSchema(TIMER_PROBE).averageDurationMs }
+    },
     debugLog: (String) -> Unit = ::println
 ): List<ModelBenchmarkResult> = runBlocking {
     models.map { model ->
@@ -42,20 +56,14 @@ fun runBenchmark(
     val averageCostMB = costValidateFn(model, debugLog)
     debugLog("  Avg cost:         ${"%.2f".format(averageCostMB)} MB")
 
-    // Timer tests
-    val ollamaClient = no.jamph.ragumami.core.llm.OllamaClient(ollamaBaseUrl, model)
-    val schemaService = no.jamph.bigquery.BigQuerySchemaServiceMock()
-    val websites = schemaService.getWebsites()
-    val ragService = no.jamph.ragumami.umami.UmamiRAGService(ollamaClient, schemaService)
-    
-    val endToEndResult = EndToEndTimer(ragService).measureFullPipeline(TIMER_PROBE, "https://aksel.nav.no", websites)
-    debugLog("  End-to-end:       ${endToEndResult.durationMs} ms")
-    
-    val longPromptResult = LongPromptTimer(ollamaClient).measureLlmWithLargeSchema(TIMER_PROBE)
-    debugLog("  Long prompt:      ${longPromptResult.averageDurationMs} ms (avg of ${longPromptResult.iterations})")
-    
-    val shortPromptResult = ShortPromptTimer(ollamaClient).measureLlmWithSmallSchema(TIMER_PROBE)
-    debugLog("  Short prompt:     ${shortPromptResult.averageDurationMs} ms (avg of ${shortPromptResult.iterations})")
+    val endToEndMs = endToEndTimerFn("https://aksel.nav.no", model)
+    debugLog("  End-to-end:       $endToEndMs ms")
+
+    val longPromptMs = longPromptTimerFn(model)
+    debugLog("  Long prompt:      $longPromptMs ms")
+
+    val shortPromptMs = shortPromptTimerFn(model)
+    debugLog("  Short prompt:     $shortPromptMs ms")
 
     val speedResult = TokenSpeedMeasurer(ollamaBaseUrl, model).measure(SPEED_PROBE)
     debugLog("  Tokens/sec:       ${"%.1f".format(speedResult.tokensPerSecond)} (avg of 5)")
@@ -66,9 +74,9 @@ fun runBenchmark(
             sqlAccuracy     = sqlAccuracy,
             dialectAccuracy = dialectAccuracy,
             averageCostMB   = averageCostMB,
-            endToEndMs      = endToEndResult.durationMs,
-            longPromptMs    = longPromptResult.averageDurationMs,
-            shortPromptMs   = shortPromptResult.averageDurationMs,
+            endToEndMs      = endToEndMs,
+            longPromptMs    = longPromptMs,
+            shortPromptMs   = shortPromptMs,
             tokensPerSecond = speedResult.tokensPerSecond,
             promptTokens    = speedResult.promptTokens,
             responseTokens  = speedResult.responseTokens,

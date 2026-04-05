@@ -412,7 +412,36 @@ fun Application.configureRouting() {
                             no.jamph.llmValidation.TokenSpeedResult(model, 0, 0, 0L, 0.0)
                         }
                         emitEvent("debug", "Token speed: ${"%.1f".format(speedResult.tokensPerSecond)} tokens/sec")
-                        
+
+                        // Step 7: Timer tests
+                        val ollamaClient = no.jamph.ragumami.core.llm.OllamaClient(benchmarkOllamaUrl, model)
+                        val schemaService = no.jamph.bigquery.BigQuerySchemaServiceMock()
+                        val ragService = no.jamph.ragumami.umami.UmamiRAGService(ollamaClient, schemaService)
+                        val timerProbe = "Show me pageviews per day for https://aksel.nav.no"
+
+                        emitEvent("debug", "--- Measuring end-to-end ---")
+                        val endToEndMs = try {
+                            no.jamph.llmValidation.EndToEndTimer(ragService)
+                                .measureFullPipeline(timerProbe, "https://aksel.nav.no", schemaService.getWebsites()).durationMs
+                        } catch (e: Exception) { emitEvent("debug", "End-to-end failed: ${e.message}"); -1L }
+
+                        emitEvent("debug", "--- Measuring long prompt ---")
+                        val longPromptMs = try {
+                            no.jamph.llmValidation.LongPromptTimer(ollamaClient)
+                                .measureLlmWithLargeSchema(timerProbe).averageDurationMs
+                        } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e.message}"); -1L }
+
+                        emitEvent("debug", "--- Measuring short prompt ---")
+                        val shortPromptMs = try {
+                            no.jamph.llmValidation.ShortPromptTimer(ollamaClient)
+                                .measureLlmWithSmallSchema(timerProbe).averageDurationMs
+                        } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e.message}"); -1L }
+
+                        emitEvent("debug", "--- Estimating cost ---")
+                        val avgCostMB = try {
+                            no.jamph.llmValidation.CostValidateLLmEstimator(model) { msg -> emitEvent("debug", msg) }
+                        } catch (e: Exception) { emitEvent("debug", "Cost estimate failed: ${e.message}"); 0.0 }
+
                         // Assemble and print results
                         emitEvent("debug", "")
                         emitEvent("debug", "========== RESULTS ==========")
@@ -420,6 +449,10 @@ fun Application.configureRouting() {
                         emitEvent("debug", "Timestamp:          ${Instant.now()}")
                         emitEvent("debug", "SQL accuracy:       ${"%.0f".format(sqlAccuracy * 100)}%")
                         emitEvent("debug", "Dialect accuracy:   ${"%.0f".format(dialectAccuracy * 100)}%")
+                        emitEvent("debug", "Avg cost:           ${"%.2f".format(avgCostMB)} MB")
+                        emitEvent("debug", "End-to-end:         $endToEndMs ms")
+                        emitEvent("debug", "Long prompt:        $longPromptMs ms")
+                        emitEvent("debug", "Short prompt:       $shortPromptMs ms")
                         emitEvent("debug", "Tokens/sec:         ${"%.1f".format(speedResult.tokensPerSecond)}")
                         emitEvent("debug", "Prompt tokens:      ${speedResult.promptTokens}")
                         emitEvent("debug", "Response tokens:    ${speedResult.responseTokens}")
