@@ -41,6 +41,7 @@ class BigQuerySchemaServiceMock : BigQuerySchemaProvider {
 === BIGQUERY DATABASE SCHEMA ===
 Project: fagtorsdag-prod-81a6
 Dataset: umami_student
+Current time: 2025-12-28T00:00:00Z
 
 === DATABASE TABLES ===
 
@@ -115,6 +116,8 @@ Columns:
 - To join event and event_data: event.event_id = event_data.website_event_id
 - To query inside session_parameters or event_parameters, use CROSS JOIN UNNEST(...) AS p and access p.data_key, p.string_value, p.number_value, p.date_value, p.data_type
     """.trimIndent()
+
+    override fun timeNow(): String = "2025-12-28T00:00:00Z"
 
     fun isHealthy(): Boolean = true
 }

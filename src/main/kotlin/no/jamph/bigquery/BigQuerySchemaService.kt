@@ -108,6 +108,7 @@ class BigQuerySchemaService(
         schemaBuilder.appendLine("=== BIGQUERY DATABASE SCHEMA ===")
         schemaBuilder.appendLine("Project: $projectId")
         schemaBuilder.appendLine("Dataset: $dataset")
+        schemaBuilder.appendLine("Current time: ${timeNow()}")
         schemaBuilder.appendLine()
 
         schemaBuilder.appendLine("=== DATABASE TABLES ===")
@@ -137,6 +138,8 @@ class BigQuerySchemaService(
 
         return schemaBuilder.toString()
     }
+
+    override fun timeNow(): String = "2025-12-28T00:00:00Z"
 
     /**
      * Health check - verifies BigQuery connection.
