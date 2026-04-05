@@ -19,15 +19,16 @@ class UmamiRAGService(
     }
     
     suspend fun generateSQL(naturalLanguageQuery: String, url: String? = null): String {
-        // Get schema context from BigQuery if available, otherwise use fallback
-        val schemaContext = if (bigQueryService != null) {
-            try {
-                bigQueryService.getSchemaContext()
-            } catch (e: Exception) {
-                getFallbackSchemaContext()
-            }
-        } else {
-            getFallbackSchemaContext()
+        // Require BigQuery to be configured
+        if (bigQueryService == null) {
+            throw IllegalStateException("BigQuery is not configured. Cannot generate SQL queries.")
+        }
+        
+        // Get schema context from BigQuery
+        val schemaContext = try {
+            bigQueryService.getSchemaContext()
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to retrieve BigQuery schema: ${e.message}", e)
         }
         
         // Parse siteId and urlPath from the query (frontend embeds them in natural language)
@@ -47,37 +48,6 @@ class UmamiRAGService(
         val codeBlock = Regex("```(?:sql)?\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
             .find(response)?.groupValues?.get(1)?.trim()
         return codeBlock ?: response.trim()
-    }
-    
-    private fun getFallbackSchemaContext(): String {
-        return """
-        === BIGQUERY DATABASE SCHEMA ===
-        Note: BigQuery not configured. Using fallback schema.
-        
-        === AVAILABLE WEBSITES ===
-        - Aksel (example)
-        
-        === DATABASE TABLES ===
-        
-        Table: `project.dataset.public_website`
-        Columns:
-          - website_id (STRING, REQUIRED) - Unique identifier for website
-          - name (STRING, NULLABLE) - Website name
-          - domain (STRING, NULLABLE) - Website domain
-        
-        Table: `project.dataset.event`
-        Columns:
-          - website_id (STRING, REQUIRED) - Reference to website
-          - event_name (STRING, NULLABLE) - Event name
-          - created_at (TIMESTAMP, REQUIRED) - Event timestamp
-          - session_id (STRING, NULLABLE) - Session identifier
-          - url_path (STRING, NULLABLE) - URL path
-        
-        === QUERY INSTRUCTIONS ===
-        - Always use fully qualified table names with backticks
-        - Filter by website_id when querying event tables
-        - Match website names to appropriate website_id values
-        """.trimIndent()
     }
     
     /**

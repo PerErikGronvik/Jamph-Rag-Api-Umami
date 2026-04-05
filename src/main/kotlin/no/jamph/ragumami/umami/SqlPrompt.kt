@@ -2,12 +2,6 @@ package no.jamph.ragumami.umami
 
 /**
  * Universal SQL prompt builder for BigQuery + Umami Analytics.
- * 
- * This prompt is used by:
- * - Production API endpoint (UmamiRAGService)
- * - Benchmark testing (LlmSqlLogic)
- * 
- * The 13 critical rules ensure consistent, high-quality SQL generation.
  */
 object SqlPrompt {
     
