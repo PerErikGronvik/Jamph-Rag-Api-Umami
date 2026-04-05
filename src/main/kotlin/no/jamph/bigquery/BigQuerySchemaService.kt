@@ -126,6 +126,7 @@ class BigQuerySchemaService(
                         "event_name" -> " - Name of custom event (only set when event_type = 2)"
                         "session_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(session_parameters) AS p"
                         "event_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(event_parameters) AS p"
+                        "referrer_domain" -> " - Origin domain of visitor"
                         "website_event_id" -> " - Foreign key to event.event_id"
                         else -> ""
                     }

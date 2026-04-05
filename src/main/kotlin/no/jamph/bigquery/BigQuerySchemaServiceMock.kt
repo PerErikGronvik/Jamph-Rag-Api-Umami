@@ -69,7 +69,7 @@ Columns:
   - url_query (STRING, NULLABLE)
   - referrer_path (STRING, NULLABLE)
   - referrer_query (STRING, NULLABLE)
-  - referrer_domain (STRING, NULLABLE)
+  - referrer_domain (STRING, NULLABLE) - Origin domain of visitor
   - page_title (STRING, NULLABLE)
   - event_type (INT64, NULLABLE) - 1: page view, 2: custom event
   - event_name (STRING, NULLABLE) - Name of custom event (only set when event_type = 2)
