@@ -423,24 +423,24 @@ fun Application.configureRouting() {
                         val endToEndMs = try {
                             no.jamph.llmValidation.EndToEndTimer(ragService)
                                 .measureFullPipeline(timerProbe, "https://aksel.nav.no", schemaService.getWebsites()).durationMs
-                        } catch (e: Exception) { emitEvent("debug", "End-to-end failed: ${e.message}"); -1L }
+                        } catch (e: Exception) { emitEvent("debug", "End-to-end failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Measuring long prompt ---")
                         val longPromptMs = try {
                             no.jamph.llmValidation.LongPromptTimer(ollamaClient)
                                 .measureLlmWithLargeSchema(timerProbe).averageDurationMs
-                        } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e.message}"); -1L }
+                        } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Measuring short prompt ---")
                         val shortPromptMs = try {
                             no.jamph.llmValidation.ShortPromptTimer(ollamaClient)
                                 .measureLlmWithSmallSchema(timerProbe).averageDurationMs
-                        } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e.message}"); -1L }
+                        } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Estimating cost ---")
                         val avgCostMB = try {
                             no.jamph.llmValidation.CostValidateLLmEstimator(model) { msg -> emitEvent("debug", msg) }
-                        } catch (e: Exception) { emitEvent("debug", "Cost estimate failed: ${e.message}"); 0.0 }
+                        } catch (e: Exception) { emitEvent("debug", "Cost estimate failed: ${e::class.simpleName}: ${e.message}: ${e.cause?.message}"); 0.0 }
 
                         // Assemble and print results
                         emitEvent("debug", "")

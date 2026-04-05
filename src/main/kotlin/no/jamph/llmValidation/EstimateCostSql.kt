@@ -2,7 +2,7 @@ package no.jamph.llmValidation
 
 import com.google.cloud.bigquery.*
 
-fun estimateCostInMB(sql: String, bigquery: BigQuery = BigQueryOptions.getDefaultInstance().service): Double {
+fun estimateCostInMB(sql: String, bigquery: BigQuery = BigQueryOptions.newBuilder().setProjectId("fagtorsdag-prod-81a6").build().service): Double {
 
     val config = QueryJobConfiguration.newBuilder(sql)
         .setDryRun(true)
