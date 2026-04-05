@@ -1,13 +1,13 @@
 package no.jamph.ragumami.umami
 
 import no.jamph.ragumami.core.llm.OllamaClient
-import no.jamph.bigquery.BigQuerySchemaService
+import no.jamph.bigquery.BigQuerySchemaProvider
 import no.jamph.bigquery.Website
 import no.jamph.bigquery.urlToSiteIdAndPath
 
 class UmamiRAGService(
     private val ollamaClient: OllamaClient,
-    private val bigQueryService: BigQuerySchemaService? = null
+    private val bigQueryService: BigQuerySchemaProvider? = null
 ) {
     suspend fun generateSQL(question: String, url: String, websites: List<Website>): String {
         val schemaContext = getSchemaContext()

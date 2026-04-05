@@ -1,6 +1,6 @@
 package no.jamph.bigquery
 
-class BigQuerySchemaServiceMock {
+class BigQuerySchemaServiceMock : BigQuerySchemaProvider {
 
     fun getWebsites(): List<Website> = listOf(
         Website("fb69e1e9-1bd3-4fd9-b700-9d035cbf44e1", "Aksel", "aksel.nav.no"),

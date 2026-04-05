@@ -20,13 +20,13 @@ class LongPromptTimer(
 ) {
     private val logger = LoggerFactory.getLogger(LongPromptTimer::class.java)
 
-    suspend fun measureLongContext(query: String): LongPromptTime {
+    suspend fun measureLongContext(query: String, url: String, websites: List<no.jamph.bigquery.Website>): LongPromptTime {
         require(query.length > threshold) {
             "Query length (${query.length}) must exceed threshold ($threshold) for long context measurement"
         }
 
         val start = System.currentTimeMillis()
-        val sql = ragService.generateSQL(query)  // covers BigQuery schema + Ollama
+        val sql = ragService.generateSQL(query, url, websites)  // covers BigQuery schema + Ollama
         val durationMs = System.currentTimeMillis() - start
 
         val exceedsThreshold = sql.length > threshold

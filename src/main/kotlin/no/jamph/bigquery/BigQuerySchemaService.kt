@@ -22,7 +22,7 @@ data class TableSchema(
 
 class BigQuerySchemaService(
     private val queryService: BigQueryQueryService,
-) {
+) : BigQuerySchemaProvider {
     private val bigQuery = queryService.bigQuery
     private val projectId = queryService.projectId
     private val dataset = queryService.dataset

@@ -18,13 +18,13 @@ class ShortPromptTimer(
 ) {
     private val logger = LoggerFactory.getLogger(ShortPromptTimer::class.java)
 
-    suspend fun measureTime(query: String): ShortPromptTime {
+    suspend fun measureTime(query: String, url: String, websites: List<no.jamph.bigquery.Website>): ShortPromptTime {
         require(query.length <= SHORT_PROMPT_MAX) {
             "Query length (${query.length}) must be $SHORT_PROMPT_MAX characters or fewer"
         }
 
         val startNanos = System.nanoTime()
-        val sql = ragService.generateSQL(query)  // covers BigQuery schema + Ollama
+        val sql = ragService.generateSQL(query, url, websites)  // covers BigQuery schema + Ollama
         val durationMs = (System.nanoTime() - startNanos) / 1_000_000
 
         logger.info("E2E: query_length={} durationMs={}", query.length, durationMs)
