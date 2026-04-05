@@ -126,7 +126,7 @@ class LongPromptTimerTest {
 
         assertThrows<IllegalArgumentException> {
             runBlocking {
-                measurer.measureLongContext(shortPrompt)
+                measurer.measureLongContext(shortPrompt, testUrl, testWebsites)
             }
         }
     }
