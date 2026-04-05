@@ -118,7 +118,16 @@ class BigQuerySchemaService(
                 schemaBuilder.appendLine("Columns:")
                 schema.columns.forEach { col ->
                     val desc = col.description?.let { " - $it" } ?: ""
-                    val extraInfo = if (col.name == "event_type") " - 1: page view, 2: custom event" else ""
+                    val extraInfo = when (col.name) {
+                        "event_type" -> " - 1: page view, 2: custom event"
+                        "session_id" -> " - Unique identifier for a visitor session"
+                        "visit_id" -> " - Unique identifier for a specific visit within a session"
+                        "event_name" -> " - Name of custom event (only set when event_type = 2)"
+                        "session_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(session_parameters) AS p"
+                        "event_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(event_parameters) AS p"
+                        "website_event_id" -> " - Foreign key to event.event_id"
+                        else -> ""
+                    }
                     schemaBuilder.appendLine("  - ${col.name} (${col.type}, ${col.mode})$desc$extraInfo")
                 }
             } catch (e: Exception) {

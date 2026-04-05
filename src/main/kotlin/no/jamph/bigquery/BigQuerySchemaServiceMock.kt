@@ -46,7 +46,7 @@ Dataset: umami_student
 
 Table: `fagtorsdag-prod-81a6.umami_student.session`
 Columns:
-  - session_id (STRING, NULLABLE)
+  - session_id (STRING, NULLABLE) - Unique identifier for a visitor session
   - website_id (STRING, NULLABLE)
   - hostname (STRING, NULLABLE)
   - browser (STRING, NULLABLE)
@@ -56,7 +56,7 @@ Columns:
   - language (STRING, NULLABLE)
   - country (STRING, NULLABLE)
   - created_at (TIMESTAMP, NULLABLE)
-  - session_parameters (ARRAY<STRUCT<...>>, REQUIRED)
+  - session_parameters (ARRAY<STRUCT<data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64>>, REQUIRED) - Unnest to access: CROSS JOIN UNNEST(session_parameters) AS p, then use p.data_key, p.string_value, etc.
 
 Table: `fagtorsdag-prod-81a6.umami_student.event`
 Columns:
@@ -71,8 +71,8 @@ Columns:
   - referrer_domain (STRING, NULLABLE)
   - page_title (STRING, NULLABLE)
   - event_type (INT64, NULLABLE) - 1: page view, 2: custom event
-  - event_name (STRING, NULLABLE)
-  - visit_id (STRING, NULLABLE)
+  - event_name (STRING, NULLABLE) - Name of custom event (only set when event_type = 2)
+  - visit_id (STRING, NULLABLE) - Unique identifier for a specific visit within a session
   - tag (STRING, NULLABLE)
   - utm_source (STRING, NULLABLE)
   - utm_content (STRING, NULLABLE)
@@ -104,7 +104,7 @@ Table: `fagtorsdag-prod-81a6.umami_student.event_data`
 Columns:
   - website_event_id (STRING, REQUIRED)
   - website_id (STRING, NULLABLE)
-  - event_parameters (ARRAY<STRUCT<...>>, REQUIRED)
+  - event_parameters (ARRAY<STRUCT<data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64>>, REQUIRED) - Unnest to access: CROSS JOIN UNNEST(event_parameters) AS p, then use p.data_key, p.string_value, etc.
   - created_at (TIMESTAMP, NULLABLE)
 
 === QUERY INSTRUCTIONS ===
@@ -112,6 +112,8 @@ Columns:
 - Use backticks (`) around table names
 - Filter by website_id when querying event or event_data tables
 - Match website names from user queries to website_id values listed above
+- To join event and event_data: event.event_id = event_data.website_event_id
+- To query inside session_parameters or event_parameters, use CROSS JOIN UNNEST(...) AS p and access p.data_key, p.string_value, p.number_value, p.date_value, p.data_type
     """.trimIndent()
 
     fun isHealthy(): Boolean = true
