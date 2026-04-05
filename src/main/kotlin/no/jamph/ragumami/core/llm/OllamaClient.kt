@@ -78,10 +78,14 @@ class OllamaClient(
                 setBody(mapOf(
                     "model" to model,
                     "prompt" to prompt,
-                    "stream" to false
+                    "stream" to false,
+                    "options" to mapOf(
+                        "temperature" to 0.0,
+                        "repeat_penalty" to 1.01
+                    )
                 ))
             }
-            
+
             val duration = System.currentTimeMillis() - startTime
             logger.info("OLLAMA_SUCCESS: Generate completed in {}ms", duration)
             
