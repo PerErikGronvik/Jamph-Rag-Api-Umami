@@ -118,7 +118,7 @@ private fun getOptimizedQueries(): List<Pair<String, String>> = listOf(
 fun CostValidateLLmEstimator(
     modelName: String,
     iterations: Int = 10,
-    bigquery: BigQuery = BigQueryOptions.newBuilder().setProjectId("fagtorsdag-prod-81a6").build().service,
+    bigquery: BigQuery = defaultBigQuery(),
     debugLog: (String) -> Unit = ::println
 ): Double = runBlocking {
     val schemaService = BigQuerySchemaServiceMock()

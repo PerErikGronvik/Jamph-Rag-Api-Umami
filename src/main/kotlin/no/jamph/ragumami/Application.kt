@@ -427,19 +427,20 @@ fun Application.configureRouting() {
 
                         emitEvent("debug", "--- Measuring long prompt ---")
                         val longPromptMs = try {
-                            no.jamph.llmValidation.LongPromptTimer(ollamaClient)
+                            no.jamph.llmValidation.LongPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithLargeSchema(timerProbe).averageDurationMs
                         } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Measuring short prompt ---")
                         val shortPromptMs = try {
-                            no.jamph.llmValidation.ShortPromptTimer(ollamaClient)
+                            no.jamph.llmValidation.ShortPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithSmallSchema(timerProbe).averageDurationMs
                         } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Estimating cost ---")
                         val avgCostMB = try {
-                            no.jamph.llmValidation.CostValidateLLmEstimator(model) { msg -> emitEvent("debug", msg) }
+                            val bq = (bigQueryService as? no.jamph.bigquery.BigQuerySchemaService)?.bigQuery ?: no.jamph.llmValidation.defaultBigQuery()
+                            no.jamph.llmValidation.CostValidateLLmEstimator(model, bigquery = bq) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) { emitEvent("debug", "Cost estimate failed: ${e::class.simpleName}: ${e.message}: ${e.cause?.message}"); 0.0 }
 
                         // Assemble and print results
