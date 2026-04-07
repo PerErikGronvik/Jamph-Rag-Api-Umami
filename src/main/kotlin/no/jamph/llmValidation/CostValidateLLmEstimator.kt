@@ -195,7 +195,7 @@ fun CostValidateLLmEstimator(
     debugLog("--- Calculating expected costs from reference queries ---")
     val expectedCosts = optimizedQueries.mapIndexed { index, (name, sql) ->
         val costMB = estimateCostInMB(sql, bigquery)
-        debugLog("  Cost test ${index + 1}/${optimizedQueries.size} $name: ${costMB.format(2)} MB")
+        debugLog("  Reference ${index + 1}/${optimizedQueries.size} $name: ${costMB.format(2)} MB")
         costMB
     }
 
@@ -220,26 +220,30 @@ fun CostValidateLLmEstimator(
 
     testCases.forEachIndexed { index, testCase ->
         debugLog("  Cost test ${index + 1}/${testCases.size}: ${testCase.question}")
-        val sql = ragService.generateSQL(testCase.question, testCase.url, websites)
+        try {
+            val sql = ragService.generateSQL(testCase.question, testCase.url, websites)
 
-        val costMB = if (isSqlQueryValid(sql)) {
-            try {
-                val c = estimateCostInMB(sql, bigquery)
-                debugLog("    ${c.format(2)} MB (expected: ${testCase.expectedCostMB.format(2)} MB)")
-                c
-            } catch (e: Exception) {
-                debugLog("    failed - ${e.message}")
+            val costMB = if (isSqlQueryValid(sql)) {
+                try {
+                    val c = estimateCostInMB(sql, bigquery)
+                    debugLog("    ${c.format(2)} MB (expected: ${testCase.expectedCostMB.format(2)} MB)")
+                    c
+                } catch (e: Exception) {
+                    debugLog("    failed - ${e.message}")
+                    null
+                }
+            } else {
+                debugLog("    invalid SQL")
                 null
             }
-        } else {
-            debugLog("    invalid SQL")
-            null
-        }
 
-        if (costMB != null) {
-            val withinRange = costMB <= testCase.expectedCostMB * 1.5
-            results.add(CostResult(testCase.question, costMB, testCase.expectedCostMB, withinRange))
-            debugLog("  → ${if (withinRange) "PASS ✓" else "FAIL ✗"}")
+            if (costMB != null) {
+                val withinRange = costMB <= testCase.expectedCostMB * 1.5
+                results.add(CostResult(testCase.question, costMB, testCase.expectedCostMB, withinRange))
+                debugLog("  → ${if (withinRange) "PASS ✓" else "FAIL ✗"}")
+            }
+        } catch (e: Exception) {
+            debugLog("  → FAIL (${e.message})")
         }
     }
 
