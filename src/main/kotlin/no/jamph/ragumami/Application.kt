@@ -382,37 +382,43 @@ fun Application.configureRouting() {
                             return@launch
                         }
                         
-                        val runAccuracyTests = false // TODO: re-enable after timer run
+                        val skipSqlAccuracyTest = false
+                        val skipDialectAccuracyTest = false
+                        val skipTokenSpeedTest = false
+                        val skipEndToEndTest = false
+                        val skipLongPromptTest = false
+                        val skipShortPromptTest = false
+                        val skipCostEstimateTest = false
 
                         // Step 4: SQL accuracy test
                         emitEvent("debug", "--- Starting SQL accuracy test ---")
-                        val sqlAccuracy = if (runAccuracyTests) try {
+                        val sqlAccuracy = if (!skipSqlAccuracyTest) try {
                             LlmSqlLogic(model) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) {
                             emitEvent("debug", "SQL accuracy test failed: ${e.message}")
                             0.0
-                        } else { emitEvent("debug", "skipped"); 0.0 }
+                        } else { emitEvent("debug", "skip SQL accuracy test"); 0.0 }
                         emitEvent("debug", "SQL accuracy: ${"%.0f".format(sqlAccuracy * 100)}%")
 
                         // Step 5: Dialect accuracy test
                         emitEvent("debug", "--- Starting dialect accuracy test ---")
-                        val dialectAccuracy = if (runAccuracyTests) try {
+                        val dialectAccuracy = if (!skipDialectAccuracyTest) try {
                             DialectValidetaLlmToSql(model) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) {
                             emitEvent("debug", "Dialect accuracy test failed: ${e.message}")
                             0.0
-                        } else { emitEvent("debug", "skipped"); 0.0 }
+                        } else { emitEvent("debug", "skip dialect accuracy test"); 0.0 }
                         emitEvent("debug", "Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
                         
                         // Step 6: Token speed test
                         emitEvent("debug", "--- Measuring token speed ---")
-                        val speedResult = try {
+                        val speedResult = if (!skipTokenSpeedTest) try {
                             TokenSpeedMeasurer(benchmarkOllamaUrl, model)
                                 .measure("Write a BigQuery SQL query that counts rows in a table.")
                         } catch (e: Exception) {
                             emitEvent("debug", "Speed test failed: ${e.message}")
                             no.jamph.llmValidation.TokenSpeedResult(model, 0, 0, 0L, 0.0)
-                        }
+                        } else { emitEvent("debug", "skip token speed test"); no.jamph.llmValidation.TokenSpeedResult(model, 0, 0, 0L, 0.0) }
                         emitEvent("debug", "Token speed: ${"%.1f".format(speedResult.tokensPerSecond)} tokens/sec")
 
                         // Step 7: Timer tests
@@ -422,35 +428,39 @@ fun Application.configureRouting() {
                         val timerProbe = "Show me pageviews per day for https://aksel.nav.no"
 
                         emitEvent("debug", "--- Measuring end-to-end ---")
-                        emitEvent("debug", "  Running end-to-end pipeline...")
-                        val endToEndMs = try {
+                        val endToEndMs = if (!skipEndToEndTest) try {
+                            emitEvent("debug", "  Running end-to-end pipeline...")
                             val result = no.jamph.llmValidation.EndToEndTimer(ragService)
                                 .measureFullPipeline(timerProbe, "https://aksel.nav.no", schemaService.getWebsites())
                             emitEvent("debug", "  Result: ${result.durationMs} ms")
                             result.durationMs
                         } catch (e: Exception) { emitEvent("debug", "End-to-end failed: ${e::class.simpleName}: ${e.message}"); -1L }
+                        else { emitEvent("debug", "skip end-to-end test"); -1L }
 
                         emitEvent("debug", "--- Measuring long prompt ---")
-                        val longPromptMs = try {
+                        val longPromptMs = if (!skipLongPromptTest) try {
                             val ms = no.jamph.llmValidation.LongPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithLargeSchema(timerProbe).averageDurationMs
                             emitEvent("debug", "  Average: $ms ms")
                             ms
                         } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
+                        else { emitEvent("debug", "skip long prompt test"); -1L }
 
                         emitEvent("debug", "--- Measuring short prompt ---")
-                        val shortPromptMs = try {
+                        val shortPromptMs = if (!skipShortPromptTest) try {
                             val ms = no.jamph.llmValidation.ShortPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithSmallSchema(timerProbe).averageDurationMs
                             emitEvent("debug", "  Average: $ms ms")
                             ms
                         } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
+                        else { emitEvent("debug", "skip short prompt test"); -1L }
 
                         emitEvent("debug", "--- Estimating cost ---")
-                        val avgCostMB = try {
+                        val avgCostMB = if (!skipCostEstimateTest) try {
                             val bq = (bigQueryService as? no.jamph.bigquery.BigQuerySchemaService)?.bigQuery ?: no.jamph.llmValidation.defaultBigQuery()
                             no.jamph.llmValidation.CostValidateLLmEstimator(model, bigquery = bq) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) { emitEvent("debug", "Cost estimate failed: ${e::class.simpleName}: ${e.message}: ${e.cause?.message}"); 0.0 }
+                        else { emitEvent("debug", "skip cost estimate test"); 0.0 }
 
                         // Assemble and print results
                         emitEvent("debug", "")
