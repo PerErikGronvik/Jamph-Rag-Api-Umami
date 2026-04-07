@@ -147,6 +147,20 @@ fun LlmSqlLogic(
                 Rule("contains 'sok'/'søk'/search") { sql -> Regex("'sok'|'søk'|search", RegexOption.IGNORE_CASE).containsMatchIn(sql) },
                 Rule("contains ROW_NUMBER or JOIN") { sql -> sql.uppercase().contains("ROW_NUMBER") || sql.uppercase().contains("JOIN") },
             )
+        // for versjon 2: testCase(
+        //     question = "Er det noen sider om ki på aksel",
+        //     question = "Hvor mange besøker 404 og hvor kommer de fra?"
+        //     question = "bruker brukerne mus, keyboard og assistert teknologi. på accordion"
+        //     question = "oversikt, fra start til fullført søknad. utloggede og innloggede sider"
+        //     question = "hvor mange går gjennpomsnittlig i måneden fra forsiden til linkcardkomponentsiden?"
+        //     question = "hvilken side brukes mest pr dag? Bortsett fra forsiden"
+        //     question = "hvor mange laster ned svg ikon på siden?"
+        //     question = "Hva er den mest vanlige rekkeføgen og navigere til /komponenter?" (mulig vi trenger skjema her)
+        //     question = "prosent av besøkende på siden som får 404?"
+        //     question = "Hvor mange søker WCAG eller universiell utforming på aksel?" (trenger muligens skjema for søkeresultater)
+        //     question = "Har mange søkt på "produkt" type rullestol eller hjelpemiddel"
+        //     question = "Hvor mye tid bruker folk på siden"
+        //     question = "er apple mer populært enn windows? på siden" (kanskje liten skjema endring)
         ),
     )
 
