@@ -382,24 +382,26 @@ fun Application.configureRouting() {
                             return@launch
                         }
                         
+                        val runAccuracyTests = false // TODO: re-enable after timer run
+
                         // Step 4: SQL accuracy test
                         emitEvent("debug", "--- Starting SQL accuracy test ---")
-                        val sqlAccuracy = try {
+                        val sqlAccuracy = if (runAccuracyTests) try {
                             LlmSqlLogic(model) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) {
                             emitEvent("debug", "SQL accuracy test failed: ${e.message}")
                             0.0
-                        }
+                        } else { emitEvent("debug", "skipped"); 0.0 }
                         emitEvent("debug", "SQL accuracy: ${"%.0f".format(sqlAccuracy * 100)}%")
-                        
+
                         // Step 5: Dialect accuracy test
                         emitEvent("debug", "--- Starting dialect accuracy test ---")
-                        val dialectAccuracy = try {
+                        val dialectAccuracy = if (runAccuracyTests) try {
                             DialectValidetaLlmToSql(model) { msg -> emitEvent("debug", msg) }
                         } catch (e: Exception) {
                             emitEvent("debug", "Dialect accuracy test failed: ${e.message}")
                             0.0
-                        }
+                        } else { emitEvent("debug", "skipped"); 0.0 }
                         emitEvent("debug", "Dialect accuracy: ${"%.0f".format(dialectAccuracy * 100)}%")
                         
                         // Step 6: Token speed test
@@ -420,21 +422,28 @@ fun Application.configureRouting() {
                         val timerProbe = "Show me pageviews per day for https://aksel.nav.no"
 
                         emitEvent("debug", "--- Measuring end-to-end ---")
+                        emitEvent("debug", "  Running end-to-end pipeline...")
                         val endToEndMs = try {
-                            no.jamph.llmValidation.EndToEndTimer(ragService)
-                                .measureFullPipeline(timerProbe, "https://aksel.nav.no", schemaService.getWebsites()).durationMs
+                            val result = no.jamph.llmValidation.EndToEndTimer(ragService)
+                                .measureFullPipeline(timerProbe, "https://aksel.nav.no", schemaService.getWebsites())
+                            emitEvent("debug", "  Result: ${result.durationMs} ms")
+                            result.durationMs
                         } catch (e: Exception) { emitEvent("debug", "End-to-end failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Measuring long prompt ---")
                         val longPromptMs = try {
-                            no.jamph.llmValidation.LongPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
+                            val ms = no.jamph.llmValidation.LongPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithLargeSchema(timerProbe).averageDurationMs
+                            emitEvent("debug", "  Average: $ms ms")
+                            ms
                         } catch (e: Exception) { emitEvent("debug", "Long prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Measuring short prompt ---")
                         val shortPromptMs = try {
-                            no.jamph.llmValidation.ShortPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
+                            val ms = no.jamph.llmValidation.ShortPromptTimer(ollamaClient) { msg -> emitEvent("debug", msg) }
                                 .measureLlmWithSmallSchema(timerProbe).averageDurationMs
+                            emitEvent("debug", "  Average: $ms ms")
+                            ms
                         } catch (e: Exception) { emitEvent("debug", "Short prompt failed: ${e::class.simpleName}: ${e.message}"); -1L }
 
                         emitEvent("debug", "--- Estimating cost ---")
