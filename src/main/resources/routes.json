@@ -2,5 +2,5 @@
   "frontendUrl":  "https://jamph.ekstern.dev.nav.no",
   "ragApiUrl":    "https://jamph-rag-api-umami.ekstern.dev.nav.no",
   "ollamaUrl":    "https://jamph-ollama.ekstern.dev.nav.no",
-  "defaultModel": "phi4-mini"
+  "defaultModel": "deepseek-coder:6.7b-instruct"
 }
