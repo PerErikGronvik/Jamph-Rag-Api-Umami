@@ -13,7 +13,7 @@ data class ExtractedVariables(
     val userPrompt: String
 )
 
-class PickVariablesJson(
+class PickVariableJsonLlm(
     private val ollamaClient: OllamaClient,
     private val prebuiltSchemas: PrebuiltSchemaProvider
 ) {

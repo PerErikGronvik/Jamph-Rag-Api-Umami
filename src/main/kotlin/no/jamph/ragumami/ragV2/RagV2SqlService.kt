@@ -9,8 +9,9 @@ class RagV2SqlService(
 ) {
     private val schemaProvider = PrebuiltSchemaService(bigQueryService)
     private val queryTypeClassifier = PickASqlQuestionTypeLlm(ollamaClient, bigQueryService)
-    private val variableExtractor = PickVariablesJson(ollamaClient, schemaProvider)
+    private val variableExtractor = PickVariableJsonLlm(ollamaClient, schemaProvider)
     private val sqlConstructor = ConstructSQL(schemaProvider)
+    private val otherLlm = OtherLlm(ollamaClient, bigQueryService)
 
     suspend fun generateSql(
         userPrompt: String,
@@ -23,19 +24,27 @@ class RagV2SqlService(
             pathOperator = pathOperator
         )
         
-        val extractedVariables = variableExtractor.extractVariables(
-            queryType = classificationResult.queryType,
-            siteId = classificationResult.siteId,
-            urlPath = classificationResult.urlPath,
-            userPrompt = classificationResult.userPrompt
-        )
-        
-        return sqlConstructor.constructSql(
-            queryType = classificationResult.queryType,
-            variables = extractedVariables.variables,
-            siteId = extractedVariables.siteId,
-            urlPath = extractedVariables.urlPath
-        )
+        return if (classificationResult.queryType == "default") {
+            otherLlm.generateSql(
+                userPrompt = classificationResult.userPrompt,
+                siteId = classificationResult.siteId,
+                urlPath = classificationResult.urlPath
+            )
+        } else {
+            val extractedVariables = variableExtractor.extractVariables(
+                queryType = classificationResult.queryType,
+                siteId = classificationResult.siteId,
+                urlPath = classificationResult.urlPath,
+                userPrompt = classificationResult.userPrompt
+            )
+            
+            sqlConstructor.constructSql(
+                queryType = classificationResult.queryType,
+                variables = extractedVariables.variables,
+                siteId = extractedVariables.siteId,
+                urlPath = extractedVariables.urlPath
+            )
+        }
     }
     
 
