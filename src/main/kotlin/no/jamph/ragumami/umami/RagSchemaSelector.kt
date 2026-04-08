@@ -4,7 +4,7 @@ import no.jamph.ragumami.core.llm.OllamaClient
 
 object RagSchemaSelector {
     suspend fun selectSchema(question: String, ollamaClient: OllamaClient): String {
-        val validOptions = setOf("linear", "actions", "default")
+        val validOptions = setOf("linear", "default")
         val maxRetries = 3
         
         for (attempt in 0 until maxRetries) {
