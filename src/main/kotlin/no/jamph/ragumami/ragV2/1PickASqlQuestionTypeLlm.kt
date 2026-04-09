@@ -40,14 +40,20 @@ class PickASqlQuestionTypeLlm(
         val parsedUrl = urlToSiteIdAndPath(url, websites, pathOperator)
         
         var rawResponse: String? = null
-        val extractedType = tryCatchRetry(3, "Error 10000") {
-            val response = ollamaClient.generateConstrained(
-                prompt = buildClassificationPrompt(userPrompt),
-                temperature = 0.0,
-                maxTokens = 500
-            )
-            if (captureDebugInfo) rawResponse = response
-            extractQueryTypeFromJson(response)
+        val extractedType = try {
+            tryCatchRetry(3, "Error 10000") {
+                val response = ollamaClient.generateConstrained(
+                    prompt = buildClassificationPrompt(userPrompt),
+                    temperature = 0.0,
+                    maxTokens = 500
+                )
+                rawResponse = response
+                if (captureDebugInfo) rawResponse = response
+                extractQueryTypeFromJson(response)
+            }
+        } catch (e: Exception) {
+            val llmOutput = rawResponse?.take(100) ?: "No response"
+            throw IllegalStateException("Error 10000 (Last LLM output: $llmOutput)", e)
         }
         
         return QueryTypeResult(
