@@ -192,23 +192,13 @@ Columns:
         """.trimIndent(),
 
         simplifiedSql = """
-            -- Example: top pages by views
-            SELECT url_path, page_title, COUNT(*) AS count
-            FROM event
-            WHERE event_type = 1
-                AND created_at >= '[START_DATE]'
-                AND created_at < '[END_DATE]'
-            GROUP BY url_path, page_title
-            ORDER BY count DESC
-            LIMIT [LIMIT]
-
-            -- Example: top OS / browser / device / country (use session table instead)
-            SELECT os, COUNT(*) AS count
-            FROM session
+            SELECT [RANK_COLUMN], COUNT(*) AS count
+            FROM [TABLE_NAME]
             WHERE website_id = '[SITE_ID]'
+                [EXTRA_FILTER]
                 AND created_at >= '[START_DATE]'
                 AND created_at < '[END_DATE]'
-            GROUP BY os
+            GROUP BY [RANK_COLUMN]
             ORDER BY count DESC
             LIMIT [LIMIT]
         """.trimIndent(),
