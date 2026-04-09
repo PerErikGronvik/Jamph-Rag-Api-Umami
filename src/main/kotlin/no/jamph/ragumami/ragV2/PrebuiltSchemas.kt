@@ -28,23 +28,161 @@ object PrebuiltSchemas {
     fun getJsonSchema(type: String) = get(type, null).jsonSchema
     
     private fun linearSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuerySchema = """**bigquery schema**""".trimIndent(),
-        sqlTemplate = """**sql template**""".trimIndent(),
-        simplifiedSql = """**sql for llm**""".trimIndent(),
-        jsonSchema = """**json schema**""".trimIndent()
+        bigQuerySchema = """
+
+=== DATABASE TABLES ===
+
+Table: `session`
+Columns:
+  - session_id (STRING, NULLABLE) - Unique identifier for a visitor session
+  - hostname (STRING, NULLABLE)
+  - browser (STRING, NULLABLE)
+  - os (STRING, NULLABLE)
+  - device (STRING, NULLABLE)
+  - screen (STRING, NULLABLE)
+  - language (STRING, NULLABLE)
+  - country (STRING, NULLABLE)
+  - created_at (TIMESTAMP, NULLABLE)
+  - session_parameters (ARRAY<STRUCT<data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64>>, REQUIRED) - Unnest to access: CROSS JOIN UNNEST(session_parameters) AS p, then use p.data_key, p.string_value, etc.
+
+Table: `event`
+Columns:
+  - event_id (STRING, REQUIRED)
+  - session_id (STRING, NULLABLE)
+  - url_path (STRING, NULLABLE)
+  - url_query (STRING, NULLABLE)
+  - referrer_path (STRING, NULLABLE)
+  - referrer_query (STRING, NULLABLE)
+  - referrer_domain (STRING, NULLABLE) - Origin domain of visitor
+  - page_title (STRING, NULLABLE)
+  - event_type (INT64, NULLABLE) - 1: page view, 2: custom event
+  - event_name (STRING, NULLABLE) - Known values: navigere, sok, sidebar-subnav, god-praksis-chip, client-error, last ned, feedback-designsystem, 404, accordion lukket, skjema fullfort, accordion åpnet (only set when event_type = 2)
+  - visit_id (STRING, NULLABLE) - Unique identifier for a specific visit within a session
+  - tag (STRING, NULLABLE)
+  - utm_source (STRING, NULLABLE)
+  - utm_content (STRING, NULLABLE)
+  - utm_campaign (STRING, NULLABLE)
+  - utm_medium (STRING, NULLABLE)
+  - utm_term (STRING, NULLABLE)
+  - hostname (STRING, NULLABLE)
+  - website_name (STRING, NULLABLE)
+  - website_domain (STRING, NULLABLE)
+  - website_share_id (STRING, NULLABLE)
+  - website_team_id (STRING, NULLABLE)
+
+    """
+        """.trimIndent(),
+        simplifiedSql = """
+        For context only:
+        WITH base AS (
+        SELECT
+        DATE_DIFF(DATE(created_at), DATE('[START_DATE]'), DAY) + 1 AS x,
+        COUNT(*) AS y
+        FROM [TABLE_NAME]
+        WHERE event_type = 1
+        AND DATE(created_at) BETWEEN DATE('[START_DATE]') AND DATE('[END_DATE]')
+        [ADD_FILTERS_HERE]
+        GROUP BY x
+        ),
+        Do not complete the SQL.
+        """.trimIndent(),
+        sqlTemplate = """
+
+        WITH base AS (
+        SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (
+            SELECT
+            DATE_DIFF(DATE(created_at), DATE('[START_DATE]'), DAY) + 1 AS x,
+            COUNT(*) AS y
+            FROM [TABLE_NAME]
+            WHERE event_type = 1
+            AND website_id = '[WEBSITE_ID]'
+            AND DATE(created_at) BETWEEN DATE('[START_DATE]') AND DATE('[END_DATE]')
+            [ADD_FILTERS_HERE]
+            GROUP BY x
+        )
+        ),
+        stats AS (
+        SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,
+                VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy
+        FROM base
+        ),
+        params AS (
+        SELECT n, x_bar, y_bar,
+            SAFE_DIVIDE(cov_xy, var_x) AS slope,
+            y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept
+        FROM stats
+        ),
+        resid AS (
+        SELECT b.x, b.y, p.n, p.x_bar, p.y_bar, p.slope, p.intercept,
+            b.y - (p.intercept + p.slope * b.x) AS r
+        FROM base b CROSS JOIN params p
+        ),
+        sums AS (
+        SELECT MIN(n) AS n, MIN(intercept) AS a, MIN(slope) AS b,
+                MIN(x_bar) AS x_bar, MIN(y_bar) AS y_bar,
+            SUM(POW(r, 2)) AS sse,
+            SUM(POW(y - y_bar, 2)) AS sst,
+            SUM(POW(x - x_bar, 2)) AS sxx
+        FROM resid
+        ),
+        m AS (
+        SELECT n, a, b,
+            1 - SAFE_DIVIDE(sse, sst) AS r2,
+            SQRT(SAFE_DIVIDE(sse, n - 2)) AS rmse,
+            SQRT(SAFE_DIVIDE(SAFE_DIVIDE(sse, n - 2), sxx)) AS se_b,
+            SQRT(SAFE_DIVIDE(sse, n - 2) * (1.0 / n + POW(x_bar, 2) / sxx)) AS se_a
+        FROM sums
+        ),
+        pv AS (
+        SELECT n, a, b, r2, rmse, se_a, se_b,
+            SAFE_DIVIDE(a, se_a) AS t_a,
+            SAFE_DIVIDE(b, se_b) AS t_b,
+            GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(a, se_a)), 2)) / 2.506628 * (
+            0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)))
+            - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 2)
+            + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(a, se_a)), 3))) AS p_a,
+            GREATEST(0, 2 * EXP(-0.5 * POW(ABS(SAFE_DIVIDE(b, se_b)), 2)) / 2.506628 * (
+            0.4361836 / (1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)))
+            - 0.1201676 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 2)
+            + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 3))) AS p_b
+        FROM m
+        )
+        SELECT 'Skjæringspunkt (a)' AS term,
+        ROUND(a, 4) AS estimat, ROUND(se_a, 4) AS std_feil,
+        ROUND(t_a, 3) AS t_verdi, ROUND(p_a, 4) AS p_verdi,
+        ROUND(r2, 4) AS r2, ROUND(rmse, 3) AS rmse, n
+        FROM pv
+        UNION ALL
+        SELECT 'Stigningstall (b)',
+        ROUND(b, 4), ROUND(se_b, 4),
+        ROUND(t_b, 3), ROUND(p_b, 4),
+        ROUND(r2, 4), ROUND(rmse, 3), n
+        FROM pv
+        ORDER BY term
+
+        """.trimIndent(),
+        jsonSchema = """
+        {
+        "START_DATE": [START_DATE],
+        "END_DATE": [END_DATE],
+        "TABLE_NAME": [TABLE_NAME],
+        "ADD_FILTERS_HERE": [ADD_FILTERS_HERE]
+        }
+        """.trimIndent() // website_id and event prefix is predetermined.
     )
     
     private fun rankingsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         bigQuerySchema = """**bigquery schema**""".trimIndent(),
-        sqlTemplate = """**sql template**""".trimIndent(),
         simplifiedSql = """**sql for llm**""".trimIndent(),
+        sqlTemplate = """**sql template**""".trimIndent(),
         jsonSchema = """**json schema**""".trimIndent()
     )
     
     private fun defaultSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         bigQuerySchema = """**bigquery schema**""".trimIndent(),
-        sqlTemplate = """**sql template**""".trimIndent(),
         simplifiedSql = """**sql for llm**""".trimIndent(),
+        sqlTemplate = """**sql template**""".trimIndent(),
         jsonSchema = """**json schema**""".trimIndent()
     )
+
 }
