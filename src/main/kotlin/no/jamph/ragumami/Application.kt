@@ -271,30 +271,21 @@ fun Application.configureRouting() {
                     ragV2Service
                 }
                 
-                if (request.debug == true) {
-                    val result = serviceToUse.generateSqlWithDebugInfo(
-                        userPrompt = request.query,
-                        url = request.url,
-                        pathOperator = request.pathOperator ?: "starts-with"
+                val result = serviceToUse.generateSqlWithDebugInfo(
+                    userPrompt = request.query,
+                    url = request.url,
+                    pathOperator = request.pathOperator ?: "starts-with"
+                )
+                call.respond(SQLResponse(
+                    sql = result.sql,
+                    debugInfo = mapOf(
+                        "queryType" to result.queryType,
+                        "siteId" to result.siteId,
+                        "urlPath" to result.urlPath,
+                        "extractedVariables" to result.extractedVariables,
+                        "rawClassificationResponse" to result.rawClassificationResponse
                     )
-                    call.respond(SQLResponse(
-                        sql = result.sql,
-                        debugInfo = mapOf(
-                            "queryType" to result.queryType,
-                            "siteId" to result.siteId,
-                            "urlPath" to result.urlPath,
-                            "extractedVariables" to result.extractedVariables,
-                            "rawClassificationResponse" to result.rawClassificationResponse
-                        )
-                    ))
-                } else {
-                    val sql = serviceToUse.generateSql(
-                        userPrompt = request.query,
-                        url = request.url,
-                        pathOperator = request.pathOperator ?: "starts-with"
-                    )
-                    call.respond(SQLResponse(sql))
-                }
+                ))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
