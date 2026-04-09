@@ -10,8 +10,8 @@ class ConstructSQL(
         variables: JsonObject,
         siteId: String,
         urlPath: String
-        prefix: String = "fagtorsdag-prod-81a6.umami_student."
-        table: String
+        // prefix: String = "fagtorsdag-prod-81a6.umami_student.",
+        // table: String
     ): String {
         var sql = prebuiltSchemas.getSqlTemplate(queryType)
         sql = injectPredeterminedVariables(sql, siteId, urlPath)
@@ -31,7 +31,7 @@ class ConstructSQL(
         result = result.replace("[WEBSITE_ID]", siteId)
         result = result.replace("[URL_PATH]", urlPath)
         result = result.replace("[PATH]", urlPath)
-        result = result.replace("[TABLE]", prefix+table)
+        // result = result.replace("[TABLE]", prefix+table)
         
         return result
     }

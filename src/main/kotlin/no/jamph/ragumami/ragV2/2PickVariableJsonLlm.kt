@@ -45,7 +45,7 @@ class PickVariableJsonLlm(
     private fun buildExtractionPrompt(
         userPrompt: String,
         bigQuerySchema: String,
-        sqlTemplate: String,
+        simplifiedSql: String,
         jsonSchema: String
     ): String = """
         You are a SQL BigQuery expert. Your task is to extract variable values from the user's question
