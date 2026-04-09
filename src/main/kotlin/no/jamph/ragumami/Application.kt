@@ -29,6 +29,7 @@ import no.jamph.ragumami.core.llm.OllamaClient
 import no.jamph.bigquery.BigQueryQueryService
 import no.jamph.bigquery.BigQuerySchemaService
 import no.jamph.ragumami.umami.UmamiRAGService
+import no.jamph.ragumami.ragV2.RagV2SqlService
 import no.jamph.llmValidation.runBenchmark
 import no.jamph.llmValidation.ModelBenchmarkResult
 import no.jamph.llmValidation.LlmSqlLogic
@@ -149,6 +150,7 @@ fun Application.configureRouting() {
     }
     
     val ragService = UmamiRAGService(ollamaClient, bigQueryService)
+    val ragV2Service = if (bigQueryService != null) RagV2SqlService(ollamaClient, bigQueryService) else null
     
     routing {
         get("/") {
@@ -241,7 +243,7 @@ fun Application.configureRouting() {
             try {
                 val request = call.receive<SQLRequest>()
                 
-                if (bigQueryService == null) {
+                if (ragV2Service == null) {
                     call.respond(
                         HttpStatusCode.ServiceUnavailable,
                         ErrorResponse("BigQuery is not configured.")
@@ -264,13 +266,16 @@ fun Application.configureRouting() {
                 }
                 
                 val serviceToUse = if (clientToUse !== ollamaClient) {
-                    UmamiRAGService(clientToUse, bigQueryService)
+                    RagV2SqlService(clientToUse, bigQueryService!!)
                 } else {
-                    ragService
+                    ragV2Service
                 }
                 
-                val websites = bigQueryService.getWebsites()
-                val sql = serviceToUse.generateSQL(request.query, request.url, websites)
+                val sql = serviceToUse.generateSql(
+                    userPrompt = request.query,
+                    url = request.url,
+                    pathOperator = request.pathOperator ?: "starts-with"
+                )
                 call.respond(SQLResponse(sql))
             } catch (e: Exception) {
                 call.respond(
@@ -504,7 +509,7 @@ fun Application.configureRouting() {
 
 data class ChatRequest(val message: String, val model: String? = null)
 data class ChatResponse(val response: String)
-data class SQLRequest(val query: String, val url: String? = null, val model: String? = null)
+data class SQLRequest(val query: String, val url: String? = null, val model: String? = null, val pathOperator: String? = null)
 data class SQLResponse(val sql: String)
 data class BenchmarkRequest(val model: String? = null, val ollamaBaseUrl: String? = null)
 data class ErrorResponse(val error: String)
