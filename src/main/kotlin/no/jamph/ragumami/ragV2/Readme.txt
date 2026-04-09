@@ -27,21 +27,21 @@ Full schema-based LLM SQL generation for queries that don't fit templates.
 
 Query Types
 
-1. rankings
+1. rankings - Aryo
 
 Top/bottom lists with ORDER BY + LIMIT
 Examples: Top pages, top sources, most visited OS/browser, most searched terms
 Pattern: GROUP BY + ORDER BY DESC/ASC + LIMIT
 How: Standard step 1.2.3.
 
-2. linear - Schema
+2. linear - Schema - Per Erik
 
 Regression analysis for trends
 Examples: "trend i daglige sidevisninger"
 How: Give variables put into formula.
 How: Standard step 1.2(simplified, the model does not need to know about rmse etc).3.
 
-3. funnel
+3. funnel - Per Erik
 
 Multi-step conversion paths
 Examples: "fra start til fullført søknad", "fra forsiden til linkcardkomponentsiden"
@@ -50,7 +50,7 @@ SQL: Window functions or step-by-step JOINs
 How: 1.2.3 Code ?? node search?? first find shortest path between the sites. Then count for each step. fint more routes. etc??
 Or respond, cannot do that right now, but look in grafbyggeren.
 
-4. Search terms popularity
+4. Search terms popularity - Aryo
 Finsished logic for finding search term. instert term. BAM. Done.
 
 5. Referrers
