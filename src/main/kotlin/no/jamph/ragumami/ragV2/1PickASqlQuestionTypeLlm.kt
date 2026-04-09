@@ -20,6 +20,7 @@ class PickASqlQuestionTypeLlm(
         private val VALID_QUERY_TYPES = setOf(
             "linear",
             "rankings",
+            "search",
             "default"
         )
     }
@@ -57,6 +58,7 @@ class PickASqlQuestionTypeLlm(
         Available query types:
         - linear: ONLY For explicit TREND/REGRESSION analysis. Examples: "Hvordan endrer trafikken seg","gjør en trendanalyse"
         - rankings: ONLY For queries that ask for top/bottom results. Examples: "top pages", "most visited pages", "least popular pages"
+        - search: ONLY For queries asking how many users searched for a SPECIFIC term. Examples: "hvor mange søker på accessibility", "hvor mange søker etter universell utforming", "søkeantall for ki"
         - default: Everything else. This can handle a wide variety of questions.
         
         User question: $userPrompt
