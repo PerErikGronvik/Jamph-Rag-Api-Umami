@@ -71,7 +71,6 @@ Columns:
   - website_share_id (STRING, NULLABLE)
   - website_team_id (STRING, NULLABLE)
 
-    """
         """.trimIndent(),
         simplifiedSql = """
         For context only:
@@ -240,9 +239,9 @@ Columns:
         // The LLM fills these in from the user's question
         jsonSchema = """
             {
-              "SEARCH_TERM": "word or phrase from the user's question",
-              "START_DATE": "YYYY-MM-DD",
-              "END_DATE": "YYYY-MM-DD"
+              "SEARCH_TERM": [SEARCH_TERM],
+              "START_DATE": [START_DATE],
+              "END_DATE": [END_DATE]
             }
         """.trimIndent()
     )
