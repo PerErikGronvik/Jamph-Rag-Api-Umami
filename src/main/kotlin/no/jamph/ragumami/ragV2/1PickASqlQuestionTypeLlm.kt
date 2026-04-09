@@ -55,9 +55,9 @@ class PickASqlQuestionTypeLlm(
         You are a SQL query classifier. Analyze the user's question and determine which type of query template to use.
         
         Available query types:
-        - linear: Trend analysis or regression. Examples: "how is traffic changing", "trend analysis", "growth rate"
-        - rankings: Queries that ask for top/bottom results. Examples: "top pages", "most visited pages", "least popular pages"
-        - default: Any other type of query
+        - linear: ONLY For explicit TREND/REGRESSION analysis. Examples: "Hvordan endrer trafikken seg","gjør en trendanalyse"
+        - rankings: ONLY For queries that ask for top/bottom results. Examples: "top pages", "most visited pages", "least popular pages"
+        - default: Everything else. This can handle a wide variety of questions.
         
         User question: $userPrompt
         

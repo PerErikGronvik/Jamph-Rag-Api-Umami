@@ -3,9 +3,10 @@ package no.jamph.ragumami.ragV2
 import no.jamph.bigquery.BigQuerySchemaProvider
 
 data class SchemaTriple(
-    val bigQuery: String,
-    val sql: String,
-    val json: String
+    val bigQuerySchema: String,
+    val sqlTemplate: String,
+    val simplifiedSql: String,
+    val jsonSchema: String
 )
 
 object PrebuiltSchemas {
@@ -21,25 +22,29 @@ object PrebuiltSchemas {
         }
     }
     
-    fun bigquery(type: String, schemaProvider: BigQuerySchemaProvider) = get(type, schemaProvider).bigQuery
-    fun sql(type: String) = get(type, null).sql
-    fun json(type: String) = get(type, null).json
+    fun getBigQuerySchema(type: String, schemaProvider: BigQuerySchemaProvider) = get(type, schemaProvider).bigQuerySchema
+    fun getSqlTemplate(type: String) = get(type, null).sqlTemplate
+    fun getSimplifiedSql(type: String) = get(type, null).simplifiedSql
+    fun getJsonSchema(type: String) = get(type, null).jsonSchema
     
     private fun linearSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuery = """**bigquery schema**""".trimIndent(),
-        sql = """**sql template**""".trimIndent(),
-        json = """**json schema**""".trimIndent()
+        bigQuerySchema = """**bigquery schema**""".trimIndent(),
+        sqlTemplate = """**sql template**""".trimIndent(),
+        simplifiedSql = """**sql for llm**""".trimIndent(),
+        jsonSchema = """**json schema**""".trimIndent()
     )
     
     private fun rankingsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuery = """**bigquery schema**""".trimIndent(),
-        sql = """**sql template**""".trimIndent(),
-        json = """**json schema**""".trimIndent()
+        bigQuerySchema = """**bigquery schema**""".trimIndent(),
+        sqlTemplate = """**sql template**""".trimIndent(),
+        simplifiedSql = """**sql for llm**""".trimIndent(),
+        jsonSchema = """**json schema**""".trimIndent()
     )
     
     private fun defaultSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuery = """**bigquery schema**""".trimIndent(),
-        sql = """**sql template**""".trimIndent(),
-        json = """**json schema**""".trimIndent()
+        bigQuerySchema = """**bigquery schema**""".trimIndent(),
+        sqlTemplate = """**sql template**""".trimIndent(),
+        simplifiedSql = """**sql for llm**""".trimIndent(),
+        jsonSchema = """**json schema**""".trimIndent()
     )
 }

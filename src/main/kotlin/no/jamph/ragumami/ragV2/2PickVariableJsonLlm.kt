@@ -62,6 +62,8 @@ class PickVariableJsonLlm(
         Fill in the missing variables in this JSON object. Return ONLY the JSON object with values filled in, no other text:
         
         $jsonSchema
+
+        Return the JSON object:
     """.trimIndent()
     
 

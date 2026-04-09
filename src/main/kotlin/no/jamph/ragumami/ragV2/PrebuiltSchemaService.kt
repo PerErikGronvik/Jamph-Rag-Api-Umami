@@ -6,7 +6,8 @@ class PrebuiltSchemaService(
     private val schemaProvider: BigQuerySchemaProvider
 ) : PrebuiltSchemaProvider {
     
-    override fun getBigQuerySchema(queryType: String) = PrebuiltSchemas.bigquery(queryType, schemaProvider)
-    override fun getSqlTemplate(queryType: String) = PrebuiltSchemas.sql(queryType)
-    override fun getJsonSchema(queryType: String) = PrebuiltSchemas.json(queryType)
+    override fun getBigQuerySchema(queryType: String) = PrebuiltSchemas.getBigQuerySchema(queryType, schemaProvider)
+    override fun getSqlTemplate(queryType: String) = PrebuiltSchemas.getSqlTemplate(queryType)
+    override fun getSimplifiedSql(queryType: String) = PrebuiltSchemas.getSimplifiedSql(queryType)
+    override fun getJsonSchema(queryType: String) = PrebuiltSchemas.getJsonSchema(queryType)
 }
