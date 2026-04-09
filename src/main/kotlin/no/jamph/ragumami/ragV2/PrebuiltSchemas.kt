@@ -179,10 +179,10 @@ Columns:
     )
     
     private fun defaultSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuerySchema = """**bigquery schema**""".trimIndent(),
-        simplifiedSql = """**sql for llm**""".trimIndent(),
-        sqlTemplate = """**sql template**""".trimIndent(),
-        jsonSchema = """**json schema**""".trimIndent()
+        bigQuerySchema = """${schemaProvider}""".trimIndent(),
+        simplifiedSql = """Write your own SQLwith Bigquery dialect here""".trimIndent(),
+        sqlTemplate = """N/A""".trimIndent(),
+        jsonSchema = """RETURN SQL""".trimIndent()
     )
 
 }
