@@ -100,7 +100,7 @@ Columns:
             WHERE website_id = '[WEBSITE_ID]'
             AND created_at >= TIMESTAMP('[START_DATE]')
             AND created_at < TIMESTAMP_ADD(TIMESTAMP('[END_DATE]'), INTERVAL 1 DAY)
-            [ADD_FILTERS_HERE]
+            [WHERE_FILTERS]
             GROUP BY x
             )
         ),
@@ -195,25 +195,26 @@ Columns:
         """.trimIndent(),
 
         simplifiedSql = """
-            SELECT [RANK_COLUMN], COUNT(*) AS count
+            SELECT [RANK_COLUMN] AS x, COUNT(*) AS count
+            [Setect_filters]
             FROM [TABLE]
-            WHERE website_id = '[SITE_ID]'
-                [EXTRA_FILTER]
+            WHERE website_id //is handled
+                [where_FILTERs]
                 AND created_at >= '[START_DATE]'
                 AND created_at < '[END_DATE]'
-            GROUP BY [RANK_COLUMN]
+            GROUP BY x
             ORDER BY count DESC
             LIMIT [LIMIT]
         """.trimIndent(),
 
         sqlTemplate = """
-            SELECT [RANK_COLUMN], COUNT(*) AS count
+            SELECT [RANK_COLUMN] AS x , COUNT(*) AS count
             FROM [TABLE]
-            WHERE website_id = '[SITE_ID]'
-                [EXTRA_FILTER]
+            WHERE website_id = '[WEBSITE_ID]'
+                [WHERE_FILTERS]
                 AND created_at >= TIMESTAMP('[START_DATE]')
                 AND created_at < TIMESTAMP('[END_DATE]')
-            GROUP BY [RANK_COLUMN]
+            GROUP BY x
             ORDER BY count DESC
             LIMIT [LIMIT]
         """.trimIndent(),
@@ -264,7 +265,7 @@ Columns:
             FROM `fagtorsdag-prod-81a6.umami_student.event` e
             JOIN `fagtorsdag-prod-81a6.umami_student.event_data` ed ON e.event_id = ed.website_event_id
             CROSS JOIN UNNEST(ed.event_parameters) AS p
-            WHERE e.website_id = '[SITE_ID]'
+            WHERE e.website_id = '[WEBSITE_ID]'
                 AND e.event_type = 2
                 AND e.event_name = 'sok'
                 AND p.data_key = 'query'
