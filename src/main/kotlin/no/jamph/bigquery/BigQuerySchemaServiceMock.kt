@@ -50,7 +50,7 @@ Columns:
   - session_id (STRING, NULLABLE) - Unique identifier for a visitor session
   - website_id (STRING, NULLABLE)
   - hostname (STRING, NULLABLE)
-  - browser (STRING, NULLABLE)
+  - browser (STRING, NULLABLE) - Known values: chrome, edge-chromium, firefox, ios, safari, crios, ios-webview, opera, facebook, samsung"
   - os (STRING, NULLABLE)
   - device (STRING, NULLABLE)
   - screen (STRING, NULLABLE)
