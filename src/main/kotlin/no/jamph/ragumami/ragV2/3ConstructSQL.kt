@@ -9,13 +9,18 @@ class ConstructSQL(
         queryType: String,
         variables: JsonObject,
         siteId: String,
-        urlPath: String
-        // prefix: String = "fagtorsdag-prod-81a6.umami_student.",
-        // table: String
+        urlPath: String,
+        prefix: String = "fagtorsdag-prod-81a6.umami_student.",
+        table: String = "event"
     ): String {
         var sql = prebuiltSchemas.getSqlTemplate(queryType)
-        sql = injectPredeterminedVariables(sql, siteId, urlPath)
+        sql = injectPredeterminedVariables(sql, siteId, urlPath, prefix, table)
         sql = replaceVariablesFromJson(sql, variables)
+        
+        // Clean up optional filters if not provided
+        sql = sql.replace("[SELECT_FILTERS]", "")
+        sql = sql.replace("[ADD_FILTERS_HERE]", "")
+        
         return sql
     }
     
@@ -23,7 +28,9 @@ class ConstructSQL(
     private fun injectPredeterminedVariables(
         sql: String,
         siteId: String,
-        urlPath: String
+        urlPath: String,
+        prefix: String,
+        table: String
     ): String {
         var result = sql
         
@@ -31,7 +38,8 @@ class ConstructSQL(
         result = result.replace("[WEBSITE_ID]", siteId)
         result = result.replace("[URL_PATH]", urlPath)
         result = result.replace("[PATH]", urlPath)
-        // result = result.replace("[TABLE]", prefix+table)
+        result = result.replace("[TABLE_NAME]", "`$prefix$table`")
+        result = result.replace("[TABLE]", "`$prefix$table`")
         
         return result
     }

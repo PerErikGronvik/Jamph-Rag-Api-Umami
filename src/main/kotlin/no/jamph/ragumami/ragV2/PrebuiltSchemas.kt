@@ -168,11 +168,10 @@ Columns:
         {
         "START_DATE": [START_DATE],
         "END_DATE": [END_DATE],
-        "TABLE_NAME": [TABLE_NAME],
         "SELECT_FILTERS": [SELECT_FILTERS],
         "ADD_FILTERS_HERE": [ADD_FILTERS_HERE]
         }
-        """.trimIndent() // website_id and event prefix is predetermined.
+        """.trimIndent() // website_id, TABLE_NAME (prefix+table), and event prefix are predetermined.
     )
     
     private fun rankingsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
