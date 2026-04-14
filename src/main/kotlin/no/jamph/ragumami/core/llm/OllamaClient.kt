@@ -46,7 +46,7 @@ class OllamaClient(
         
         install(HttpTimeout) {
             requestTimeoutMillis = 600_000
-            connectTimeoutMillis = 10_000
+            connectTimeoutMillis = 25_000
             socketTimeoutMillis = 600_000
         }
         
