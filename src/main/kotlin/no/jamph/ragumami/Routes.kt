@@ -7,7 +7,8 @@ object Routes {
         val frontendUrl: String,
         val ragApiUrl: String,
         val ollamaUrl: String,
-        val defaultModel: String? = null
+        val defaultModel: String? = null,
+        val prefixUmami: String
     )
 
     private val config: RoutesConfig = Gson().fromJson(
@@ -19,6 +20,7 @@ object Routes {
     val ragApiUrl: String     = config.ragApiUrl
     val ollamaUrl: String     = config.ollamaUrl
     val defaultModel: String? = config.defaultModel
+    val prefixUmami: String   = config.prefixUmami
 
     val frontendHost: String get() = frontendUrl.removePrefix("https://").removePrefix("http://").trimEnd('/')
     val ragApiHost: String   get() = ragApiUrl.removePrefix("https://").removePrefix("http://").trimEnd('/')
