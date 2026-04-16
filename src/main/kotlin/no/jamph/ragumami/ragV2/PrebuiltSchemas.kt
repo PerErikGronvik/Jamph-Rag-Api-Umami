@@ -334,7 +334,7 @@ Columns:
             event_name,
             created_at,
             ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) AS step_in_session
-        FROM `prefixevent`
+        FROM `prefix.event`
         WHERE website_id = //is handled
             AND created_at >= TIMESTAMP('[START_DATE]')
             AND created_at < TIMESTAMP('[END_DATE]')
@@ -360,7 +360,7 @@ Columns:
             event_name,
             created_at,
             ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY created_at) AS step_in_session
-        FROM `prefixevent`
+        FROM `prefix.event`
         WHERE website_id = '[WEBSITE_ID]'
             AND created_at >= TIMESTAMP('[START_DATE]')
             AND created_at < TIMESTAMP('[END_DATE]')
