@@ -25,7 +25,8 @@ class PickASqlQuestionTypeLlm(
             "rankings",
             "search",
             "default",
-            "journey"
+            "journey",
+            "cards"
         )
     }
     
@@ -82,13 +83,14 @@ class PickASqlQuestionTypeLlm(
         - rankings: ONLY For queries that ask for top/bottom results. Examples: "top pages", "most visited pages", "least popular pages"
         - search: ONLY For queries asking how many users searched for a SPECIFIC term. Examples: "hvor mange søker på accessibility", "hvor mange søker etter universell utforming", "søkeantall for ki"
         - journey: ONLY For queries that ask about user journeys or sequences of page visits. Needs two pages to apply. Examples: "hvor mange går fra startsiden til produktsiden", "hvor mange går fra / til /komponenter/ikoner"
+        - cards: ONLY For queries asking for multiple distinct metrics/facts to display together as cards. Examples: "4 tall for kategoriene unike besøkende, utførte handlinger, navigering, forlot", "vis oversikt med unike brukere, sidevisninger, hendelser, sesjoner"
         - default: Everything else. This can handle a wide variety of questions.
         
         User question: $userPrompt
         
         Return ONLY valid JSON with this structure:
         {
-          "queryType": "one of: linear, rankings, search, default, journey",
+          "queryType": "one of: linear, rankings, search, default, journey, cards",
         }
         
         Return ONLY the JSON object. No markdown, no code blocks, no additional text.

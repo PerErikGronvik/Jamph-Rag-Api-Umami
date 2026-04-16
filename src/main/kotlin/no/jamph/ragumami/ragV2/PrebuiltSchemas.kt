@@ -19,6 +19,7 @@ object PrebuiltSchemas {
                 "rankings" -> rankingsSchema(schemaProvider!!)
                 "search" -> searchSchema(schemaProvider!!)
                 "journey" -> journeySchema(schemaProvider!!)
+                "cards" -> cardsSchema(schemaProvider!!)
                 else -> defaultSchema(schemaProvider!!)
             }
         }
@@ -506,4 +507,129 @@ Columns:
         "END_DATE": '[END_DATE]',
         """.trimIndent()
     )
+    
+    // Kladd cards, mulig fortsatt for komplisert for modellen.
+    private fun cardsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
+        bigQuerySchema = """
+        Current time: 2025-12-30
+        ${schemaProvider}  
+        Importent:       
+        - If the user asks for fewer than 4 facts, set unused fact names to 'empty'.
+        """.trimIndent(),
+
+        simplifiedSql = """
+            WITH facts AS (
+              SELECT '[FACT1_NAME]' AS category, [SELECT1] AS value
+              FROM [TABLE1]
+              WHERE website_id //is handled
+                AND created_at >= '[START_DATE]'
+                AND created_at < '[END_DATE]'
+                [WHERE1]
+
+              UNION ALL
+
+              SELECT '[FACT2_NAME]' AS category, [SELECT2] AS value
+              FROM [TABLE2]
+              WHERE website_id //is handled
+                AND created_at >= '[START_DATE]'
+                AND created_at < '[END_DATE]'
+                [WHERE2]
+
+              UNION ALL
+
+              SELECT '[FACT3_NAME]' AS category, [SELECT3] AS value
+              FROM [TABLE3]
+              WHERE website_id //is handled
+                AND created_at >= '[START_DATE]'
+                AND created_at < '[END_DATE]'
+                [WHERE3]
+
+              UNION ALL
+
+              SELECT '[FACT4_NAME]' AS category, [SELECT4] AS value
+              FROM [TABLE4]
+              WHERE website_id //is handled
+                AND created_at >= '[START_DATE]'
+                AND created_at < '[END_DATE]'
+                [WHERE4]
+            )
+            SELECT category, value
+            FROM facts
+            ORDER BY category
+        """.trimIndent(),
+
+        sqlTemplate = """
+            CREATE TEMP TABLE facts (category STRING, value INT64);
+
+            -- Always insert FACT1
+            INSERT INTO facts
+            SELECT '[FACT1_NAME]' AS category, [SELECT1] AS value
+            FROM [TABLE1]
+            WHERE website_id = '[WEBSITE_ID]'
+              AND created_at >= TIMESTAMP('[START_DATE]')
+              AND created_at < TIMESTAMP('[END_DATE]')
+              [WHERE1];
+
+            -- Always insert FACT2
+            INSERT INTO facts
+            SELECT '[FACT2_NAME]' AS category, [SELECT2] AS value
+            FROM [TABLE2]
+            WHERE website_id = '[WEBSITE_ID]'
+              AND created_at >= TIMESTAMP('[START_DATE]')
+              AND created_at < TIMESTAMP('[END_DATE]')
+              [WHERE2];
+
+            -- Conditionally insert FACT3
+            IF '[FACT3_NAME]' != 'empty' THEN
+              INSERT INTO facts
+              SELECT '[FACT3_NAME]' AS category, [SELECT3] AS value
+              FROM [TABLE3]
+              WHERE website_id = '[WEBSITE_ID]'
+                AND created_at >= TIMESTAMP('[START_DATE]')
+                AND created_at < TIMESTAMP('[END_DATE]')
+                [WHERE3];
+            END IF;
+
+            -- Conditionally insert FACT4
+            IF '[FACT4_NAME]' != 'empty' THEN
+              INSERT INTO facts
+              SELECT '[FACT4_NAME]' AS category, [SELECT4] AS value
+              FROM [TABLE4]
+              WHERE website_id = '[WEBSITE_ID]'
+                AND created_at >= TIMESTAMP('[START_DATE]')
+                AND created_at < TIMESTAMP('[END_DATE]')
+                [WHERE4];
+            END IF;
+
+            -- Return results
+            SELECT category, value
+            FROM facts
+            ORDER BY category;
+        """.trimIndent(),
+
+        jsonSchema = """
+            {
+              "FACT1_NAME": [FACT1_NAME],
+              "SELECT1": [SELECT1],
+              "TABLE1": [TABLE1],
+              "WHERE1": [WHERE1],
+              "FACT2_NAME": [FACT2_NAME],
+              "SELECT2": [SELECT2],
+              "TABLE2": [TABLE2],
+              "WHERE2": [WHERE2],
+              "FACT3_NAME": [FACT3_NAME],
+              "SELECT3": [SELECT3],
+              "TABLE3": [TABLE3],
+              "WHERE3": [WHERE3],
+              "FACT4_NAME": [FACT4_NAME],
+              "SELECT4": [SELECT4],
+              "TABLE4": [TABLE4],
+              "WHERE4": [WHERE4],
+              "START_DATE": [START_DATE],
+              "END_DATE": [END_DATE]
+            }
+        """.trimIndent()
+    ),
+    
+
 }
