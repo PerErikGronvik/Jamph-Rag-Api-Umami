@@ -47,6 +47,12 @@ private fun injectPredeterminedVariables(
     result = result.replace("`prefix.session`", "`$prefix.session`")
     result = result.replace("`prefix.event_data`", "`$prefix.event_data`")
     result = result.replace("`prefix.public_website`", "`$prefix.public_website`")
+    
+    // Also handle non-backtick versions
+    result = result.replace("prefix.event", "$prefix.event")
+    result = result.replace("prefix.session", "$prefix.session")
+    result = result.replace("prefix.event_data", "$prefix.event_data")
+    result = result.replace("prefix.public_website", "$prefix.public_website")
 
     return result
 }

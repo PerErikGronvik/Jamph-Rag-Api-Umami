@@ -629,7 +629,6 @@ Columns:
               "END_DATE": [END_DATE]
             }
         """.trimIndent()
-    ),
-    
+    )
 
 }
