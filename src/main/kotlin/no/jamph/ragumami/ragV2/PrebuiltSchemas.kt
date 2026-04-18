@@ -559,7 +559,7 @@ Columns:
         sqlTemplate = """
             -- Fact 1 (always included)
             SELECT '[FACT1_NAME]' AS category, [SELECT1] AS value
-            FROM [TABLE1]
+            FROM `[TABLE1]`
             WHERE website_id = '[WEBSITE_ID]'
               AND created_at >= TIMESTAMP('[START_DATE]')
               AND created_at < TIMESTAMP('[END_DATE]')
@@ -569,7 +569,7 @@ Columns:
 
             -- Fact 2 (always included)
             SELECT '[FACT2_NAME]' AS category, [SELECT2] AS value
-            FROM [TABLE2]
+            FROM `[TABLE2]`
             WHERE website_id = '[WEBSITE_ID]'
               AND created_at >= TIMESTAMP('[START_DATE]')
               AND created_at < TIMESTAMP('[END_DATE]')
@@ -579,7 +579,7 @@ Columns:
 
             -- Fact 3 (conditional)
             SELECT '[FACT3_NAME]' AS category, [SELECT3] AS value
-            FROM [TABLE3]
+            FROM `[TABLE3]`
             WHERE website_id = '[WEBSITE_ID]'
               AND created_at >= TIMESTAMP('[START_DATE]')
               AND created_at < TIMESTAMP('[END_DATE]')
@@ -590,7 +590,7 @@ Columns:
 
             -- Fact 4 (conditional)
             SELECT '[FACT4_NAME]' AS category, [SELECT4] AS value
-            FROM [TABLE4]
+            FROM `[TABLE4]`
             WHERE website_id = '[WEBSITE_ID]'
               AND created_at >= TIMESTAMP('[START_DATE]')
               AND created_at < TIMESTAMP('[END_DATE]')
