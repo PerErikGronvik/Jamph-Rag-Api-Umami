@@ -10,25 +10,22 @@ data class SchemaTriple(
 )
 
 object PrebuiltSchemas {
-    private val cache = mutableMapOf<String, SchemaTriple>()
-    
-    private fun get(type: String, schemaProvider: BigQuerySchemaProvider?): SchemaTriple {
-        return cache.getOrPut(type) {
-            when (type) {
-                "linear" -> linearSchema(schemaProvider!!)
-                "rankings" -> rankingsSchema(schemaProvider!!)
-                "search" -> searchSchema(schemaProvider!!)
-                "journey" -> journeySchema(schemaProvider!!)
-                "cards" -> cardsSchema(schemaProvider!!)
-                else -> defaultSchema(schemaProvider!!)
-            }
+
+    private fun resolve(type: String, schemaProvider: BigQuerySchemaProvider): SchemaTriple {
+        return when (type) {
+            "linear" -> linearSchema(schemaProvider)
+            "rankings" -> rankingsSchema(schemaProvider)
+            "search" -> searchSchema(schemaProvider)
+            "journey" -> journeySchema(schemaProvider)
+            "cards" -> cardsSchema(schemaProvider)
+            else -> defaultSchema(schemaProvider)
         }
     }
-    
-    fun getBigQuerySchema(type: String, schemaProvider: BigQuerySchemaProvider) = get(type, schemaProvider).bigQuerySchema
-    fun getSqlTemplate(type: String) = get(type, null).sqlTemplate
-    fun getSimplifiedSql(type: String) = get(type, null).simplifiedSql
-    fun getJsonSchema(type: String) = get(type, null).jsonSchema
+
+    fun getBigQuerySchema(type: String, schemaProvider: BigQuerySchemaProvider) = resolve(type, schemaProvider).bigQuerySchema
+    fun getSqlTemplate(type: String, schemaProvider: BigQuerySchemaProvider) = resolve(type, schemaProvider).sqlTemplate
+    fun getSimplifiedSql(type: String, schemaProvider: BigQuerySchemaProvider) = resolve(type, schemaProvider).simplifiedSql
+    fun getJsonSchema(type: String, schemaProvider: BigQuerySchemaProvider) = resolve(type, schemaProvider).jsonSchema
     
     private fun linearSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         bigQuerySchema = """
@@ -312,7 +309,7 @@ Columns:
         """.trimIndent()
     )
 
-        private fun journeySchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
+    private fun journeySchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         
         bigQuerySchema = """
         Current time: 2025-12-30
@@ -508,10 +505,9 @@ Columns:
         """.trimIndent()
     )
     
-    // Kladd cards, mulig fortsatt for komplisert for modellen.
+    // Kladd cards
     private fun cardsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         bigQuerySchema = """
-        Current time: 2025-12-30
         ${schemaProvider.getSchemaContext()}  
         Important:       
         - If the user asks for fewer than 4 facts, set unused fact names to 'empty'.
