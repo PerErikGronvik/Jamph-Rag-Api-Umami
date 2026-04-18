@@ -237,7 +237,7 @@ Columns:
     )
     
     private fun defaultSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
-        bigQuerySchema = """${schemaProvider}""".trimIndent(),
+        bigQuerySchema = """${schemaProvider.getSchemaContext()}""".trimIndent(),
         simplifiedSql = """Write your own SQLwith Bigquery dialect here""".trimIndent(),
         sqlTemplate = """N/A""".trimIndent(),
         jsonSchema = """RETURN SQL""".trimIndent()
@@ -512,9 +512,10 @@ Columns:
     private fun cardsSchema(schemaProvider: BigQuerySchemaProvider) = SchemaTriple(
         bigQuerySchema = """
         Current time: 2025-12-30
-        ${schemaProvider}  
+        ${schemaProvider.getSchemaContext()}  
         Important:       
         - If the user asks for fewer than 4 facts, set unused fact names to 'empty'.
+        
         - For WHERE conditions, use TRUE if no additional filter is needed for that fact.
         
         """.trimIndent(),
