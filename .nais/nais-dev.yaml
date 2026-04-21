@@ -5,10 +5,18 @@ metadata:
   namespace: team-researchops
   labels:
     team: team-researchops
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
 spec:
   image: "{{ image }}"
   port: 8004
   ttl: 3h
+  envFrom:
+    - secret: student-bigquery
+  filesFrom:
+    - secret: student-bigquery
+      mountPath: /var/run/secrets/bigquery
   accessPolicy:
     inbound:
       rules:

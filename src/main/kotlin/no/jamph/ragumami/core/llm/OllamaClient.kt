@@ -16,6 +16,27 @@ class OllamaClient(
     private val baseUrl: String,
     private val model: String
 ) {
+    companion object {
+        private val log = LoggerFactory.getLogger(OllamaClient::class.java)
+
+        suspend fun fetchDefaultModel(baseUrl: String): String {
+            val client = HttpClient(CIO)
+            return try {
+                val response = client.get("$baseUrl/api/tags")
+                val body = response.bodyAsText()
+                val json = JsonParser.parseString(body).asJsonObject
+                json.getAsJsonArray("models")
+                    ?.firstOrNull()
+                    ?.asJsonObject
+                    ?.get("name")
+                    ?.asString
+                    ?: throw IllegalStateException("No models found in Ollama at $baseUrl. Install a model with: ollama pull <model>")
+            } finally {
+                client.close()
+            }
+        }
+    }
+
     private val logger = LoggerFactory.getLogger(OllamaClient::class.java)
     
     private val client = HttpClient(CIO) {
@@ -24,9 +45,9 @@ class OllamaClient(
         }
         
         install(HttpTimeout) {
-            requestTimeoutMillis = 120_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 120_000
+            requestTimeoutMillis = 600_000
+            connectTimeoutMillis = 25_000
+            socketTimeoutMillis = 600_000
         }
         
         install(HttpRequestRetry) {
@@ -57,23 +78,68 @@ class OllamaClient(
                 setBody(mapOf(
                     "model" to model,
                     "prompt" to prompt,
-                    "stream" to false
+                    "stream" to false,
+                    "options" to mapOf(
+                        "temperature" to 0.0,
+                        "repeat_penalty" to 1.01
+                    )
                 ))
             }
-            
+
             val duration = System.currentTimeMillis() - startTime
             logger.info("OLLAMA_SUCCESS: Generate completed in {}ms", duration)
             
             val body = response.bodyAsText()
             val json = JsonParser.parseString(body).asJsonObject
+            if (!response.status.isSuccess()) {
+                val errorMsg = json.get("error")?.asString ?: body
+                throw IllegalStateException("Ollama error (${response.status.value}): $errorMsg")
+            }
             json.get("response")?.asString ?: body
             
         } catch (e: HttpRequestTimeoutException) {
-            logger.error("OLLAMA_TIMEOUT: Request timed out after 120s for model: {}", model, e)
-            return "Integrasjon til api rag virker, men ollama virker ikke (timeout)"
+            logger.error("OLLAMA_TIMEOUT: Request timed out after 600s for model: {}", model, e)
+            throw IllegalStateException("Ollama timed out after 600s", e)
         } catch (e: Exception) {
             logger.error("OLLAMA_ERROR: Failed to generate response", e)
-            return "Integrasjon til api rag virker, men ollama virker ikke"
+            throw e
+        }
+    }
+
+    suspend fun generateConstrained(prompt: String, temperature: Double = 0.0, maxTokens: Int = 10): String {
+        return try {
+            val startTime = System.currentTimeMillis()
+            
+            val response = client.post("$baseUrl/api/generate") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "model" to model,
+                    "prompt" to prompt,
+                    "stream" to false,
+                    "options" to mapOf(
+                        "temperature" to temperature,
+                        "num_predict" to maxTokens
+                    )
+                ))
+            }
+            
+            val duration = System.currentTimeMillis() - startTime
+            logger.info("OLLAMA_SUCCESS: Constrained generate completed in {}ms", duration)
+            
+            val body = response.bodyAsText()
+            val json = JsonParser.parseString(body).asJsonObject
+            if (!response.status.isSuccess()) {
+                val errorMsg = json.get("error")?.asString ?: body
+                throw IllegalStateException("Ollama error (${response.status.value}): $errorMsg")
+            }
+            json.get("response")?.asString ?: body
+            
+        } catch (e: HttpRequestTimeoutException) {
+            logger.error("OLLAMA_TIMEOUT: Constrained request timed out", e)
+            throw IllegalStateException("Ollama timed out", e)
+        } catch (e: Exception) {
+            logger.error("OLLAMA_ERROR: Failed to generate constrained response", e)
+            throw e
         }
     }
 

@@ -130,3 +130,6 @@ Modeller:
     # timeout 900 ollama pull phi4-mini && \
     echo "DeepSeek-Coder-V2-Lite..." && \
     timeout 900 ollama pull deepseek-coder-v2:16b && \
+
+
+    #redeploy x2

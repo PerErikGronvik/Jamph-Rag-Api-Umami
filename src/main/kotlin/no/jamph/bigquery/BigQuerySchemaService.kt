@@ -22,8 +22,8 @@ data class TableSchema(
 
 class BigQuerySchemaService(
     private val queryService: BigQueryQueryService,
-) {
-    private val bigQuery = queryService.bigQuery
+) : BigQuerySchemaProvider {
+    val bigQuery = queryService.bigQuery
     private val projectId = queryService.projectId
     private val dataset = queryService.dataset
 
@@ -32,7 +32,7 @@ class BigQuerySchemaService(
      *
      * Uses BigQueryQueryService to execute SQL (so auth/client setup lives in one place).
      */
-    fun getWebsites(): List<Website> {
+    override fun getWebsites(): List<Website> {
         val query = """
             SELECT 
                 website_id,
@@ -100,8 +100,7 @@ class BigQuerySchemaService(
     /**
      * Generates a comprehensive schema context for LLM prompts.
      */
-    fun getSchemaContext(): String {
-        val websites = getWebsites()
+    override fun getSchemaContext(): String {
         val tables = listTables()
 
         val schemaBuilder = StringBuilder()
@@ -109,16 +108,7 @@ class BigQuerySchemaService(
         schemaBuilder.appendLine("=== BIGQUERY DATABASE SCHEMA ===")
         schemaBuilder.appendLine("Project: $projectId")
         schemaBuilder.appendLine("Dataset: $dataset")
-        schemaBuilder.appendLine()
-
-        schemaBuilder.appendLine("=== AVAILABLE WEBSITES ===")
-        if (websites.isEmpty()) {
-            schemaBuilder.appendLine("No websites found")
-        } else {
-            websites.forEach { website ->
-                schemaBuilder.appendLine("- ${website.name} (ID: ${website.websiteId}, Domain: ${website.domain ?: "N/A"})")
-            }
-        }
+        schemaBuilder.appendLine("Current time: ${timeNow()}")
         schemaBuilder.appendLine()
 
         schemaBuilder.appendLine("=== DATABASE TABLES ===")
@@ -129,22 +119,31 @@ class BigQuerySchemaService(
                 schemaBuilder.appendLine("Columns:")
                 schema.columns.forEach { col ->
                     val desc = col.description?.let { " - $it" } ?: ""
-                    schemaBuilder.appendLine("  - ${col.name} (${col.type}, ${col.mode})$desc")
+                    val extraInfo = when (col.name) {
+                        "event_type" -> " - 1: page view, 2: custom event"
+                        "session_id" -> " - Unique identifier for a visitor session"
+                        "visit_id" -> " - Unique identifier for a specific visit within a session"
+                        "event_name" -> " - Known values: navigere, sok, sidebar-subnav, god-praksis-chip, client-error, last ned, feedback-designsystem, 404, accordion lukket, skjema fullfort, accordion åpnet (only set when event_type = 2)"
+                        "session_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(session_parameters) AS p"
+                        "event_parameters" -> " - STRUCT fields: data_key STRING, string_value STRING, number_value FLOAT64, date_value TIMESTAMP, data_type INT64. Unnest with: CROSS JOIN UNNEST(event_parameters) AS p"
+                        "referrer_domain" -> " - Origin domain of visitor"
+                        "website_event_id" -> " - Foreign key to event.event_id"
+                        "browser" -> " - Known values: chrome, edge-chromium, firefox, ios, safari, crios, ios-webview, opera, facebook, samsung"
+                        "os" -> " - Known values: Mac OS, Windows 10, iOS, Android OS, Linux, Chrome OS"
+
+                        else -> ""
+                    }
+                    schemaBuilder.appendLine("  - ${col.name} (${col.type}, ${col.mode})$desc$extraInfo")
                 }
             } catch (e: Exception) {
                 schemaBuilder.appendLine("\nTable: `$projectId.$dataset.$tableName` - Error reading schema: ${e.message}")
             }
         }
 
-        schemaBuilder.appendLine()
-        schemaBuilder.appendLine("=== QUERY INSTRUCTIONS ===")
-        schemaBuilder.appendLine("- Always use fully qualified table names: `$projectId.$dataset.table_name`")
-        schemaBuilder.appendLine("- Use backticks (`) around table names")
-        schemaBuilder.appendLine("- Filter by website_id when querying event or event_data tables")
-        schemaBuilder.appendLine("- Match website names from user queries to website_id values listed above")
-
         return schemaBuilder.toString()
     }
+
+    override fun timeNow(): String = "2025-12-28T00:00:00Z"
 
     /**
      * Health check - verifies BigQuery connection.
@@ -155,6 +154,19 @@ class BigQuerySchemaService(
             bigQuery.getDataset(datasetId) != null
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Health check that returns the error detail instead of swallowing it.
+     */
+    fun healthCheckDetail(): String {
+        return try {
+            val datasetId = com.google.cloud.bigquery.DatasetId.of(projectId, dataset)
+            val ds = bigQuery.getDataset(datasetId)
+            if (ds != null) "OK" else "dataset '$dataset' not found in project '$projectId'"
+        } catch (e: Exception) {
+            "${e.javaClass.simpleName}: ${e.message}"
         }
     }
 }

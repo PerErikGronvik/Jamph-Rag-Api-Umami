@@ -1,0 +1,138 @@
+package no.jamph.ragumami.ragV2
+
+import no.jamph.ragumami.core.llm.OllamaClient
+import no.jamph.bigquery.BigQuerySchemaProvider
+import no.jamph.bigquery.urlToSiteIdAndPath
+import com.google.gson.JsonParser
+import com.google.gson.JsonSyntaxException
+
+data class QueryTypeResult(
+    val queryType: String,
+    val siteId: String,
+    val urlPath: String,
+    val userPrompt: String,
+    val rawLlmResponse: String? = null
+)
+
+
+class PickASqlQuestionTypeLlm(
+    private val ollamaClient: OllamaClient,
+    private val bigQueryService: BigQuerySchemaProvider
+) {
+    companion object {
+        private val VALID_QUERY_TYPES = setOf(
+            "linear",
+            "rankings",
+            "search",
+            "default",
+            "journey",
+            "cards"
+        )
+    }
+    
+
+    suspend fun classifyQueryType(
+        userPrompt: String,
+        url: String,
+        pathOperator: String = "starts-with",
+        captureDebugInfo: Boolean = false
+    ): QueryTypeResult {
+        val websites = bigQueryService.getWebsites()
+        val parsedUrl = urlToSiteIdAndPath(url, websites, pathOperator)
+        
+        var rawResponse: String? = null
+        var lastException: Exception? = null
+        
+        // Retry up to 3 times
+        repeat(3) { attempt ->
+            try {
+                val response = ollamaClient.generateConstrained(
+                    prompt = buildClassificationPrompt(userPrompt),
+                    temperature = 0.0,
+                    maxTokens = 500
+                )
+                rawResponse = response
+                val extractedType = extractQueryTypeFromJson(response)
+                
+                return QueryTypeResult(
+                    queryType = extractedType,
+                    siteId = parsedUrl.siteId,
+                    urlPath = parsedUrl.urlPath,
+                    userPrompt = userPrompt,
+                    rawLlmResponse = if (captureDebugInfo) rawResponse else null
+                )
+            } catch (e: Exception) {
+                lastException = e
+                // Continue to next retry
+            }
+        }
+        
+        // All retries failed - show either LLM response or exception message
+        val errorDetails = rawResponse?.let { "Last LLM output: ${it.take(500)}" }
+            ?: lastException?.let { "Ollama error: ${it.message}" }
+            ?: "No response from LLM"
+        throw IllegalStateException("Error 10000 ($errorDetails)", lastException)
+    }
+    
+
+    private fun buildClassificationPrompt(userPrompt: String): String = """
+        You are a classifier. Analyze the user's question and determine which template to use.
+        
+        Available templates:
+        - linear: ONLY For explicit TREND/REGRESSION analysis. Examples: "Hvordan endrer trafikken seg","gjør en trendanalyse"
+        - rankings: ONLY For queries that ask for top/bottom results. Examples: "top pages", "most visited pages", "least popular pages"
+        - search: ONLY For queries asking how many users searched for a SPECIFIC term. Examples: "hvor mange søker på accessibility", "hvor mange søker etter universell utforming", "søkeantall for ki"
+        - journey: ONLY For queries that ask about user journeys or sequences of page visits. Needs two pages to apply. Examples: "hvor mange går fra startsiden til produktsiden", "hvor mange går fra / til /komponenter/ikoner"
+        - cards: ONLY For queries asking for multiple distinct metrics/facts to display together as cards. Examples: "4 tall for kategoriene unike besøkende, utførte handlinger, navigering, forlot", "vis oversikt med unike brukere, sidevisninger, hendelser, sesjoner"
+        - default: Everything else. This can handle a wide variety of questions.
+        
+        User question: $userPrompt
+        
+        Return ONLY valid JSON with this structure:
+        {
+          "queryType": "one of: linear, rankings, search, default, journey, cards",
+        }
+        
+        Return ONLY the JSON object. No markdown, no code blocks, no additional text.
+    """.trimIndent()
+    
+
+    private fun extractQueryTypeFromJson(response: String): String {
+        val cleaned = response.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+        
+        return try {
+            val jsonObject = JsonParser.parseString(cleaned).asJsonObject
+            val queryType = jsonObject.get("queryType")?.asString?.lowercase()?.trim() ?: "default"
+            
+            if (queryType in VALID_QUERY_TYPES) {
+                queryType
+            } else {
+                VALID_QUERY_TYPES.find { queryType.contains(it) } ?: "default"
+            }
+        } catch (e: JsonSyntaxException) {
+            // Fallback: try old extraction method
+            val fallback = cleaned.lowercase()
+                .replace("\"", "")
+                .replace("'", "")
+                .replace(":", "")
+                .trim()
+            
+            if (fallback in VALID_QUERY_TYPES) {
+                fallback
+            } else {
+                VALID_QUERY_TYPES.find { fallback.contains(it) } ?: "default"
+            }
+        }
+    }
+}
+
+
+// Error Codes Reference:
+// 10000: The model did not answer with a valid query type word (linear/rankings/search/default).
+//        Possible causes: LLM returned invalid response, unclear output, timeout, or model unavailable.
+//        Resolution: Check LLM service status, review prompt clarity, or increase retry attempts.
+ 
