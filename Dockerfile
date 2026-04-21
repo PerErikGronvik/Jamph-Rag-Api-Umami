@@ -1,6 +1,6 @@
 # Multi-stage build for Jamph-Rag-Api-Umami
 # Stage 1: Build with Maven
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3-eclipse-temurin-25 AS builder
 
 WORKDIR /build
 
@@ -17,7 +17,7 @@ RUN OLLAMA_URL=$(sed -n 's/.*"ollamaUrl": *"\([^"]*\)".*/\1/p' src/main/resource
     echo "OLLAMA_BASE_URL=${OLLAMA_URL}" > /tmp/routes.env
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 
 WORKDIR /app
 
