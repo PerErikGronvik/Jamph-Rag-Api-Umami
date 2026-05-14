@@ -39,6 +39,35 @@ import java.time.Instant
 
 private val log = LoggerFactory.getLogger("Application")
 
+// --- HTTP-modeller ---
+
+data class ChatRequest(
+    val message: String,
+    val model: String? = null
+)
+
+data class ChatResponse(val response: String)
+
+data class SQLRequest(
+    val query: String,
+    val url: String? = null,
+    val model: String? = null,
+    val pathOperator: String? = null,
+    val debug: Boolean? = null
+)
+
+data class SQLResponse(
+    val sql: String,
+    val debugInfo: Map<String, String?>? = null
+)
+
+data class BenchmarkRequest(
+    val model: String? = null,
+    val ollamaBaseUrl: String? = null
+)
+
+data class ErrorResponse(val error: String)
+
 fun main() {
     embeddedServer(
         Netty,
@@ -515,10 +544,3 @@ fun Application.configureRouting() {
         }
     }
 }
-
-data class ChatRequest(val message: String, val model: String? = null)
-data class ChatResponse(val response: String)
-data class SQLRequest(val query: String, val url: String? = null, val model: String? = null, val pathOperator: String? = null, val debug: Boolean? = null)
-data class SQLResponse(val sql: String, val debugInfo: Map<String, String?>? = null)
-data class BenchmarkRequest(val model: String? = null, val ollamaBaseUrl: String? = null)
-data class ErrorResponse(val error: String)
