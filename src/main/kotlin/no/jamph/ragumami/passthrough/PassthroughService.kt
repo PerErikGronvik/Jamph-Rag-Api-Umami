@@ -5,7 +5,7 @@ import no.jamph.ragumami.core.llm.OllamaClient
 import org.slf4j.LoggerFactory
 
 data class PassthroughRequest(
-    val role: String,
+    val role: String? = null,
     val question: String? = null,
     val code: String? = null,
     val data: Any? = null
@@ -37,7 +37,7 @@ class PassthroughService(
     }
 
     suspend fun generate(request: PassthroughRequest): PassthroughResponse {
-        if (request.role.isBlank()) {
+        if (request.role.isNullOrBlank()) {
             throw IllegalArgumentException("Prompt kan ikke vaere tom")
         }
 
@@ -56,7 +56,7 @@ class PassthroughService(
             if (cleanedData != null) append(":\n$cleanedData")
             append(".\n")
             append("Your job is to answer the user politely on what the data says. ")
-            append(request.role)
+            append(request.role ?: "")
             append(" Respond in exactly one concise paragraph.")
         }
 
