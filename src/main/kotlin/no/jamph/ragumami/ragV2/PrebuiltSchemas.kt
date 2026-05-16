@@ -93,6 +93,16 @@ object PrebuiltSchemas {
         ),
         """.trimIndent(),//website_id is handled
         sqlTemplate = """ 
+
+        -- Formål: Avgjøre om det er en statistisk signifikant trend i en valgt metrikk over tid.
+        -- x = dag nummer fra startdato (1, 2, 3, ...), y = aggregert metrikk per dag (f.eks. sidevisninger).
+        -- Modell: y = a + b*x  (OLS - minste kvadraters metode)
+        -- Merk: Dataene er observasjonsdata fra én nettside. Antall datapunkter (n) tilsvarer
+        -- antall dager med aktivitet i perioden - ikke nødvendigvis alle kalenderdager.
+
+        -- Steg 1: Bygg tidsseriedataene - en rad per dag med aktivitet.
+        -- x er dag-indeks (starter på 1), y er den valgte metrikkens daglige verdi.
+        -- Modellen har default på dag fordi å gruppere etter større enheter kan skjule trender.
         WITH base AS (
         SELECT CAST(x AS FLOAT64) AS x, CAST(y AS FLOAT64) AS y FROM (
             SELECT
@@ -106,22 +116,37 @@ object PrebuiltSchemas {
             GROUP BY x
             )
         ),
+
+        -- Steg 2: Beregn oppsummeringsstatistikk for OLS.
+        -- n = antall datapunkter, x_bar/y_bar = gjennomsnitt,
+        -- var_x = varians i x (spredning i tid), cov_xy = samvariasjon mellom tid og metrikk.
         stats AS (
         SELECT COUNT(*) AS n, AVG(x) AS x_bar, AVG(y) AS y_bar,
                 VAR_SAMP(x) AS var_x, COVAR_SAMP(x, y) AS cov_xy
         FROM base
         ),
+
+        -- Steg 3: Beregn regresjonskoeffisientene.
+        -- slope (b) = endring i y per dag → positiv betyr vekst, negativ betyr nedgang.
+        -- intercept (a) = estimert y-verdi på dag 0 (startpunktet for regresjonslinjen).
         params AS (
         SELECT n, x_bar, y_bar,
             SAFE_DIVIDE(cov_xy, var_x) AS slope,
             y_bar - SAFE_DIVIDE(cov_xy, var_x) * x_bar AS intercept
         FROM stats
         ),
+
+        -- Steg 4: Beregn residualer avviket mellom faktisk og modellert verdi per dag.
+        -- r = y - ŷ  der ŷ = a + b*x.  Store residualer indikerer dårlig modelltilpasning.
         resid AS (
         SELECT b.x, b.y, p.n, p.x_bar, p.y_bar, p.slope, p.intercept,
             b.y - (p.intercept + p.slope * b.x) AS r
         FROM base b CROSS JOIN params p
         ),
+
+        -- Steg 5: Summer kvadratene som trengs for usikkerhetsberegning.
+        -- sse = sum av kvadrerte residualer (uforklart variasjon).
+        -- sst = total variasjon i y. sxx = total variasjon i x (dager).
         sums AS (
         SELECT MIN(n) AS n, MIN(intercept) AS a, MIN(slope) AS b,
                 MIN(x_bar) AS x_bar, MIN(y_bar) AS y_bar,
@@ -130,6 +155,12 @@ object PrebuiltSchemas {
             SUM(POW(x - x_bar, 2)) AS sxx
         FROM resid
         ),
+
+        -- Steg 6: Beregn modellkvalitet og standardfeil for koeffisientene.
+        -- r2 (R²): Andel av variasjonen i y som forklares av modellen. 0 = ingen, 1 = perfekt.
+        -- rmse: Gjennomsnittlig avvik (i samme enhet som y) - mål på typisk feil.
+        -- se_b: Standardfeil for stigningstallet - brukes til å vurdere usikkerhet i trenden.
+        -- se_a: Standardfeil for skjæringspunktet.
         m AS (
         SELECT n, a, b,
             1 - SAFE_DIVIDE(sse, sst) AS r2,
@@ -138,7 +169,15 @@ object PrebuiltSchemas {
             SQRT(SAFE_DIVIDE(sse, n - 2) * (1.0 / n + POW(x_bar, 2) / sxx)) AS se_a
         FROM sums
         ),
-        -- Approksimerer p-verdier for a og b ved å bruke t-verdiene og en normalfordeling
+        -- Steg 7: Beregn t-verdier og tilnærmede p-verdier.
+        -- t = estimat / standardfeil → høy |t| betyr at estimatet skiller seg tydelig fra null.
+        -- p-verdi: Sannsynligheten for å observere en like ekstrem t-verdi under nullhypotesen (ingen trend).
+        -- Lav p-verdi (< 0.05) tyder på statistisk signifikant trend, men tolkes med forsiktighet
+        -- gitt at forutsetningene for lineær regresjon (uavhengige, normalfordelte residualer) 
+        -- ikke nødvendigvis er oppfylt for webstatistikk.
+        -- Merk: BigQuery mangler innebygd t-fordeling. P-verdiene approksimeres med en 
+        -- normalfordeling via Abramowitz & Stegun-formelen (1964), noe som er rimelig for n > 30
+        -- men gir noe for lave p-verdier ved små utvalg.
         pv AS (
         SELECT n, a, b, r2, rmse, se_a, se_b,
             SAFE_DIVIDE(a, se_a) AS t_a,
@@ -153,6 +192,12 @@ object PrebuiltSchemas {
             + 0.9372980 / POW(1 + 0.33267 * ABS(SAFE_DIVIDE(b, se_b)), 3))) AS p_b
         FROM m
         )
+
+        -- Sluttresultat: To rader - en for skjæringspunktet (a) og en for stigningstallet (b).
+        -- estimat: Koeffisientens verdi. std_feil: Usikkerhet i estimatet. 
+        -- t_verdi og p_verdi: Grunnlag for signifikansvurdering.
+        -- r2 og rmse gjentas på begge rader for enkel tilgang - de gjelder hele modellen.
+        -- n = antall dagsobservasjoner som modellen er bygget på.
         SELECT 'Skjæringspunkt (a)' AS term,
         ROUND(a, 4) AS estimat, ROUND(se_a, 4) AS std_feil,
         ROUND(t_a, 3) AS t_verdi, ROUND(p_a, 4) AS p_verdi,
@@ -226,9 +271,11 @@ object PrebuiltSchemas {
         """.trimIndent(),
 
         sqlTemplate = """
+            -- Uttrykker mellom SELECT og AS bestemmer hva som rangeres. Eks: url_path
             SELECT [RANK_COLUMN] AS x , COUNT(*) AS count
             FROM `[TABLE]`
             WHERE website_id = '[WEBSITE_ID]'
+            -- Du kan endre tiden her
                 AND created_at >= TIMESTAMP('[START_DATE]')
                 AND created_at < TIMESTAMP('[END_DATE]')
                 AND [WHERE_FILTERS]
@@ -288,6 +335,7 @@ object PrebuiltSchemas {
 
         // The SQL that gets run against BigQuery
         sqlTemplate = """
+            -- Søk er for tiden ute av drift.
             SELECT COUNT(*) AS total_searches
             FROM `prefix.event` e
             JOIN `prefix.event_data` ed ON e.event_id = ed.website_event_id
